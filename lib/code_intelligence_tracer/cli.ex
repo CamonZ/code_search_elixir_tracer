@@ -3,6 +3,9 @@ defmodule CodeIntelligenceTracer.CLI do
   Command-line interface for the code intelligence tracer.
   """
 
+  alias CodeIntelligenceTracer.BuildDiscovery
+  alias CodeIntelligenceTracer.RunResult
+
   @switches [
     output: :string,
     format: :string,
@@ -32,17 +35,44 @@ defmodule CodeIntelligenceTracer.CLI do
   @valid_formats ~w(toon json)
 
   def main(args) do
-    case parse_args(args) do
-      {:ok, %{help: true}} ->
+    with {:ok, options} <- parse_args(args),
+         :ok <- check_help(options),
+         {:ok, result} <- run(options) do
+      RunResult.print(result)
+    else
+      :help ->
         print_help()
-
-      {:ok, options} ->
-        IO.inspect(options, label: "Parsed options")
 
       {:error, reason} ->
         IO.puts(:stderr, "Error: #{reason}")
-        print_help()
         System.halt(1)
+    end
+  end
+
+  defp check_help(%{help: true}), do: :help
+  defp check_help(_options), do: :ok
+
+  @doc """
+  Run the call graph extraction with the given options.
+
+  Returns `{:ok, RunResult.t()}` on success or `{:error, reason}` on failure.
+  """
+  def run(options) do
+    with {:ok, build_lib_path} <- BuildDiscovery.find_build_dir(options.path, options.env),
+         {:ok, project_apps} <- BuildDiscovery.find_project_apps(options.path) do
+      apps = BuildDiscovery.list_app_directories(build_lib_path)
+      project_type = BuildDiscovery.detect_project_type(options.path)
+
+      result =
+        RunResult.new(
+          project_type: project_type,
+          project_apps: project_apps,
+          build_dir: build_lib_path,
+          apps: apps
+        )
+
+      # TODO: Continue with BEAM file processing in later tickets
+      {:ok, result}
     end
   end
 

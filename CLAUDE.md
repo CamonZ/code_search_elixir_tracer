@@ -19,3 +19,4 @@
 - Keep functions small and focused
 - Use `@doc` and `@spec` for public functions
 - Run `mix format` before committing
+- Never use nested conditional blocks (nested `case`, `if`, `cond`). Use `with` blocks instead to flatten control flow.

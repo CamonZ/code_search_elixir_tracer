@@ -10,12 +10,12 @@ Verify escript builds and runs correctly with basic integration.
 
 ## Acceptance Criteria
 
-- [ ] Run `mix escript.build` successfully
-- [ ] `./call_graph --help` displays help text
-- [ ] `./call_graph` with no args uses current directory
-- [ ] `./call_graph /path/to/project` accepts project path
-- [ ] Exit codes: 0 for success, 1 for error
-- [ ] Clear error message when build directory not found
+- [x] Run `mix escript.build` successfully
+- [x] `./call_graph --help` displays help text
+- [x] `./call_graph` with no args uses current directory
+- [x] `./call_graph /path/to/project` accepts project path
+- [x] Exit codes: 0 for success, 1 for error
+- [x] Clear error message when build directory not found
 
 ## Verification
 
