@@ -1,5 +1,7 @@
 # T017: Add Signatures to Output
 
+# SKIP
+
 **Priority:** P1 | **Phase:** 6 - Type Signatures (Elixir 1.20+)
 **Features:** F10.1
 **Depends On:** T016, T013

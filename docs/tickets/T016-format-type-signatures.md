@@ -1,5 +1,7 @@
 # T016: Format Type Signatures
 
+# SKIP
+
 **Priority:** P1 | **Phase:** 6 - Type Signatures (Elixir 1.20+)
 **Features:** F5.2, F5.3
 **Depends On:** T015

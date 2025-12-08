@@ -1,5 +1,7 @@
 # T015: Extract Type Signatures from Debug Info
 
+# SKIP
+
 **Priority:** P1 | **Phase:** 6 - Type Signatures (Elixir 1.20+)
 **Features:** F5.1
 **Depends On:** T006
