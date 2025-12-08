@@ -18,7 +18,8 @@ defmodule CodeIntelligenceTracer.RunResult do
     :calls,
     :function_locations,
     :stats,
-    :output_file
+    :output_file,
+    :extraction_time_ms
   ]
 
   @type t :: %__MODULE__{
@@ -31,7 +32,8 @@ defmodule CodeIntelligenceTracer.RunResult do
           calls: [map()],
           function_locations: %{String.t() => map()},
           stats: Stats.t() | nil,
-          output_file: String.t() | nil
+          output_file: String.t() | nil,
+          extraction_time_ms: non_neg_integer() | nil
         }
 
   @doc """
@@ -60,12 +62,23 @@ defmodule CodeIntelligenceTracer.RunResult do
       "Functions indexed: #{stats.total_functions}"
     ]
 
-    if result.output_file do
-      lines ++ ["Output written to: #{result.output_file}"]
-    else
-      lines
-    end
+    lines = add_timing(lines, result.extraction_time_ms)
+    add_output_file(lines, result.output_file)
   end
+
+  defp add_timing(lines, nil), do: lines
+
+  defp add_timing(lines, time_ms) when time_ms < 1000 do
+    lines ++ ["Extraction time: #{time_ms}ms"]
+  end
+
+  defp add_timing(lines, time_ms) do
+    seconds = Float.round(time_ms / 1000, 2)
+    lines ++ ["Extraction time: #{seconds}s"]
+  end
+
+  defp add_output_file(lines, nil), do: lines
+  defp add_output_file(lines, output_file), do: lines ++ ["Output written to: #{output_file}"]
 
   @doc """
   Print the result to stdout.

@@ -79,8 +79,8 @@ defmodule CodeIntelligenceTracer.CLI do
       known_modules = BeamReader.collect_modules_from_apps(apps_to_process)
 
       # Extract calls, function locations, specs, types, and structs from all BEAM files
-      {calls, function_locations, specs, types, structs, stats} =
-        extract_from_apps(apps_to_process, known_modules)
+      {extraction_time_ms, {calls, function_locations, specs, types, structs, stats}} =
+        :timer.tc(fn -> extract_from_apps(apps_to_process, known_modules) end, :millisecond)
 
       # Generate and write output
       output_path = resolve_output_path(options.output, project_path)
@@ -109,7 +109,8 @@ defmodule CodeIntelligenceTracer.CLI do
           calls: calls,
           function_locations: function_locations,
           stats: stats,
-          output_file: output_path
+          output_file: output_path,
+          extraction_time_ms: extraction_time_ms
         )
 
       {:ok, result}
@@ -143,15 +144,30 @@ defmodule CodeIntelligenceTracer.CLI do
   end
 
   # Extract calls, function locations, specs, types, and structs from all apps
+  # Uses parallel processing for BEAM file extraction
   defp extract_from_apps(apps, known_modules) do
-    apps
-    |> Enum.flat_map(fn {_app_name, ebin_path} ->
-      BuildDiscovery.find_beam_files(ebin_path)
-    end)
-    |> Enum.reduce({[], %{}, %{}, %{}, %{}, Stats.new()}, fn beam_path,
-                                                             {calls_acc, locations_acc, specs_acc,
-                                                              types_acc, structs_acc, stats} ->
-      case process_beam_file(beam_path, known_modules) do
+    beam_files =
+      apps
+      |> Enum.flat_map(fn {_app_name, ebin_path} ->
+        BuildDiscovery.find_beam_files(ebin_path)
+      end)
+
+    # Process BEAM files in parallel
+    results =
+      beam_files
+      |> Task.async_stream(
+        &process_beam_file(&1, known_modules),
+        max_concurrency: System.schedulers_online(),
+        ordered: false
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    # Merge results sequentially
+    Enum.reduce(results, {[], %{}, %{}, %{}, %{}, Stats.new()}, fn result,
+                                                                   {calls_acc, locations_acc,
+                                                                    specs_acc, types_acc,
+                                                                    structs_acc, stats} ->
+      case result do
         {:ok, {module_name, new_calls, new_locations, new_specs, new_types, new_struct}} ->
           merged_locations = Map.merge(locations_acc, new_locations)
           merged_specs = Map.put(specs_acc, module_name, new_specs)

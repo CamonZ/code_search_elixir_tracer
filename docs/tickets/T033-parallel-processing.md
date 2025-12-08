@@ -10,11 +10,16 @@ Optionally parallelize BEAM file processing for performance.
 
 ## Acceptance Criteria
 
-- [ ] Use `Task.async_stream` for BEAM processing
-- [ ] Configure concurrency level (default: System.schedulers_online())
+- [x] Use `Task.async_stream` for BEAM processing
+  - **Implemented in CLI.extract_from_apps/2**
+- [x] Configure concurrency level (default: System.schedulers_online())
+  - **Uses System.schedulers_online() as max_concurrency**
 - [ ] Measure improvement on large projects
-- [ ] Ensure thread-safe result aggregation
+  - **Deferred - small projects don't show significant difference**
+- [x] Ensure thread-safe result aggregation
+  - **Results collected then merged sequentially**
 - [ ] Add `--parallel` / `--no-parallel` CLI flag (optional)
+  - **Not implemented - always parallel, no flag needed**
 
 ## Implementation Notes
 
