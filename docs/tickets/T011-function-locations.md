@@ -10,14 +10,14 @@ Extract function locations from debug info.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.FunctionExtractor` module
-- [ ] Implement `extract_functions/2` (debug_info, source_file)
-- [ ] For each function definition extract:
+- [x] Create `CodeIntelligenceTracer.FunctionExtractor` module
+- [x] Implement `extract_functions/2` (debug_info, source_file)
+- [x] For each function definition extract:
   - Function name and arity
   - Start line from definition metadata
   - End line computed from clause ranges
   - Kind: `def`, `defp`, `defmacro`, `defmacrop`
-- [ ] Implement `resolve_source_path/2` (debug_info, beam_path)
+- [x] Implement `resolve_source_path/2` (debug_info, beam_path)
   - Get absolute path from `:file` key in debug info
   - Create relative path (lib/... or test/...)
 
