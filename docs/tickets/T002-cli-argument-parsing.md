@@ -10,19 +10,19 @@ Create CLI module with argument parsing using OptionParser.
 
 ## Acceptance Criteria
 
-- [ ] Implement `main/1` as escript entry point
-- [ ] Implement `parse_args/1` supporting:
+- [x] Implement `main/1` as escript entry point
+- [x] Implement `parse_args/1` supporting:
   - `-o, --output` (string, default: "call_graph.json")
   - `-f, --format` (string, "json" or "toon", default: "json")
   - `-d, --include-deps` (boolean)
   - `--deps` (string, comma-separated)
   - `-e, --env` (string, default: "dev")
   - `-h, --help` (boolean)
-- [ ] Parse positional argument as project path (default: ".")
-- [ ] Implement `print_help/0` function
-- [ ] Return structured options map or `{:error, reason}`
-- [ ] Validate `--include-deps` and `--deps` are mutually exclusive
-- [ ] Validate `--format` is either "json" or "toon"
+- [x] Parse positional argument as project path (default: ".")
+- [x] Implement `print_help/0` function
+- [x] Return structured options map or `{:error, reason}`
+- [x] Validate `--include-deps` and `--deps` are mutually exclusive
+- [x] Validate `--format` is either "json" or "toon"
 
 ## Files to Modify
 

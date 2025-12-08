@@ -10,12 +10,12 @@ Configure Mix project for escript build.
 
 ## Acceptance Criteria
 
-- [ ] Configure escript build in `mix.exs`:
+- [x] Configure escript build in `mix.exs`:
   - `main_module: CodeIntelligenceTracer.CLI`
   - `name: "call_graph"`
-- [ ] Create placeholder `CodeIntelligenceTracer.CLI` module with `main/1` that prints "TODO"
-- [ ] Verify `mix compile` succeeds
-- [ ] Verify `mix escript.build` produces executable
+- [x] Create placeholder `CodeIntelligenceTracer.CLI` module with `main/1` that prints "TODO"
+- [x] Verify `mix compile` succeeds
+- [x] Verify `mix escript.build` produces executable
 
 ## Files to Modify
 
