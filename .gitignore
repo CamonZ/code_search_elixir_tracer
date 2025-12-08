@@ -23,7 +23,7 @@ code_search_elixir_tracer-*.tar
 /tmp/
 
 # Escript binary
-call_graph
+code_search_elixir_tracer
 
 # Generated output files
 *.json

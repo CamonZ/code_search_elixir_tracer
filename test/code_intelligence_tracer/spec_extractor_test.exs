@@ -176,7 +176,7 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
   describe "extract_specs/1 with real BEAM files" do
     test "extracts specs from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       specs = SpecExtractor.extract_specs(chunks)
@@ -486,7 +486,7 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
   describe "parse_spec_clause/1 with real BEAM data" do
     test "parses clauses from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       specs = SpecExtractor.extract_specs(chunks)
@@ -702,7 +702,7 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
   describe "format_spec/1 with real BEAM data" do
     test "formats specs from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       specs = SpecExtractor.extract_specs(chunks)
@@ -913,7 +913,7 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
   describe "correlate_specs/2 with real BEAM data" do
     test "correlates specs with functions from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       {:ok, debug_info} = CodeIntelligenceTracer.BeamReader.extract_debug_info(chunks, CodeIntelligenceTracer.Stats)
@@ -1054,7 +1054,7 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
   describe "extract_types/1 with real BEAM data" do
     test "extracts types from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       types = SpecExtractor.extract_types(chunks)

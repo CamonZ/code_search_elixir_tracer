@@ -12,24 +12,27 @@ defmodule CodeIntelligenceTracer.CLI do
     include_deps: :boolean,
     deps: :string,
     env: :string,
+    file: [:string, :keep],
     help: :boolean
   ]
 
   @aliases [
     o: :output,
-    f: :format,
+    F: :format,
     d: :include_deps,
     e: :env,
+    f: :file,
     h: :help
   ]
 
   @default_options %{
-    output: "call_graph.json",
+    output: "extracted_trace.json",
     format: "json",
     include_deps: false,
     deps: [],
     env: "dev",
-    path: "."
+    path: ".",
+    files: []
   }
 
   @valid_formats ~w(toon json)
@@ -37,8 +40,8 @@ defmodule CodeIntelligenceTracer.CLI do
   def main(args) do
     with {:ok, options} <- parse_args(args),
          :ok <- check_help(options),
-         {:ok, extractor} <- Extractor.run(options) do
-      output_path = resolve_output_path(options.output, extractor.project_path)
+         {:ok, extractor} <- run_extraction(options) do
+      output_path = resolve_output_path(options, extractor)
       :ok = write_output(extractor, output_path, options.format)
 
       print_result(extractor, output_path)
@@ -52,16 +55,24 @@ defmodule CodeIntelligenceTracer.CLI do
     end
   end
 
+  defp run_extraction(options) do
+    Extractor.run(options)
+  end
+
   defp check_help(%{help: true}), do: :help
   defp check_help(_options), do: :ok
 
-  defp resolve_output_path(output, project_path) do
+  defp resolve_output_path(%{output: output}, extractor) do
     if Path.type(output) == :absolute do
       output
     else
-      Path.join(project_path, output)
+      base_path = output_base_path(extractor)
+      Path.join(base_path, output)
     end
   end
+
+  defp output_base_path(%Extractor{project_type: nil}), do: File.cwd!()
+  defp output_base_path(%Extractor{project_path: project_path}), do: project_path
 
   defp write_output(extractor, output_path, "json") do
     json_string = Output.JSON.generate(extractor)
@@ -102,6 +113,9 @@ defmodule CodeIntelligenceTracer.CLI do
       {:deps, deps_string}, acc ->
         deps = deps_string |> String.split(",") |> Enum.map(&String.trim/1)
         %{acc | deps: deps}
+
+      {:file, file_path}, acc ->
+        %{acc | files: acc.files ++ [file_path]}
 
       {key, value}, acc ->
         Map.put(acc, key, value)
@@ -147,8 +161,10 @@ defmodule CodeIntelligenceTracer.CLI do
       PATH                    Path to the Elixir project (default: ".")
 
     Options:
-      -o, --output FILE       Output file path (default: "call_graph.json")
-      -f, --format FORMAT     Output format: "json" or "toon" (default: "json")
+      -o, --output FILE       Output file path (default: "extracted_trace.json")
+      -F, --format FORMAT     Output format: "json" or "toon" (default: "json")
+      -f, --file BEAM_FILE    Process specific BEAM file(s) instead of a project
+                              (can be specified multiple times)
       -d, --include-deps      Include all dependencies in analysis
           --deps DEPS         Include specific dependencies (comma-separated)
       -e, --env ENV           Mix environment to use (default: "dev")
@@ -160,6 +176,8 @@ defmodule CodeIntelligenceTracer.CLI do
       call_graph -o output.json           Custom output file
       call_graph --include-deps           Include all dependencies
       call_graph --deps phoenix,ecto      Include specific dependencies
+      call_graph -f path/to/Module.beam   Analyze a single BEAM file
+      call_graph -f A.beam -f B.beam      Analyze multiple BEAM files
     """)
   end
 
@@ -167,6 +185,22 @@ defmodule CodeIntelligenceTracer.CLI do
     result
     |> format_result(output_path)
     |> Enum.each(&IO.puts/1)
+  end
+
+  defp format_result(%Extractor{stats: stats, project_type: nil} = result, output_path) do
+    file_info = format_file_info(result.build_dir)
+
+    [
+      "Mode: file(s)",
+      file_info,
+      "Modules processed: #{stats.modules_processed}",
+      "  - With debug info: #{stats.modules_with_debug_info}",
+      "  - Without debug info: #{stats.modules_without_debug_info}",
+      "Calls extracted: #{stats.total_calls}",
+      "Functions indexed: #{stats.total_functions}"
+    ]
+    |> add_timing(stats.extraction_time_ms)
+    |> add_output_file(output_path)
   end
 
   defp format_result(%Extractor{stats: stats} = result, output_path) do
@@ -182,6 +216,14 @@ defmodule CodeIntelligenceTracer.CLI do
     ]
     |> add_timing(stats.extraction_time_ms)
     |> add_output_file(output_path)
+  end
+
+  defp format_file_info(files) when is_list(files) do
+    "Files: #{length(files)}"
+  end
+
+  defp format_file_info(file) when is_binary(file) do
+    "File: #{file}"
   end
 
   defp add_timing(lines, nil), do: lines

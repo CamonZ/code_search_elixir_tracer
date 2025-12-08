@@ -15,7 +15,7 @@ defmodule CodeSearchElixirTracer.MixProject do
   defp escript do
     [
       main_module: CodeIntelligenceTracer.CLI,
-      name: "call_graph"
+      name: "code_search_elixir_tracer"
     ]
   end
 

@@ -78,7 +78,7 @@ defmodule CodeIntelligenceTracer.StructExtractorTest do
   describe "extract_struct/1 with real BEAM data" do
     test "extracts struct from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Extractor.Stats.beam"
 
       {:ok, {module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
 
