@@ -12,6 +12,7 @@ defmodule CodeIntelligenceTracer.CLI do
   alias CodeIntelligenceTracer.RunResult
   alias CodeIntelligenceTracer.SpecExtractor
   alias CodeIntelligenceTracer.Stats
+  alias CodeIntelligenceTracer.StructExtractor
 
   @switches [
     output: :string,
@@ -77,8 +78,8 @@ defmodule CodeIntelligenceTracer.CLI do
       # Collect known modules for filtering
       known_modules = BeamReader.collect_modules_from_apps(apps_to_process)
 
-      # Extract calls, function locations, specs, and types from all BEAM files
-      {calls, function_locations, specs, types, stats} =
+      # Extract calls, function locations, specs, types, and structs from all BEAM files
+      {calls, function_locations, specs, types, structs, stats} =
         extract_from_apps(apps_to_process, known_modules)
 
       # Generate and write output
@@ -89,6 +90,7 @@ defmodule CodeIntelligenceTracer.CLI do
         function_locations: function_locations,
         specs: specs,
         types: types,
+        structs: structs,
         project_path: project_path,
         environment: options.env,
         stats: stats
@@ -141,20 +143,22 @@ defmodule CodeIntelligenceTracer.CLI do
     end
   end
 
-  # Extract calls, function locations, specs, and types from all apps
+  # Extract calls, function locations, specs, types, and structs from all apps
   defp extract_from_apps(apps, known_modules) do
     apps
     |> Enum.flat_map(fn {_app_name, ebin_path} ->
       BuildDiscovery.find_beam_files(ebin_path)
     end)
-    |> Enum.reduce({[], %{}, %{}, %{}, Stats.new()}, fn beam_path,
-                                                        {calls_acc, locations_acc, specs_acc,
-                                                         types_acc, stats} ->
+    |> Enum.reduce({[], %{}, %{}, %{}, %{}, Stats.new()}, fn beam_path,
+                                                             {calls_acc, locations_acc, specs_acc,
+                                                              types_acc, structs_acc, stats} ->
       case process_beam_file(beam_path, known_modules) do
-        {:ok, {module_name, new_calls, new_locations, new_specs, new_types}} ->
+        {:ok, {module_name, new_calls, new_locations, new_specs, new_types, new_struct}} ->
           merged_locations = Map.merge(locations_acc, new_locations)
           merged_specs = Map.put(specs_acc, module_name, new_specs)
           merged_types = Map.put(types_acc, module_name, new_types)
+          merged_structs = Map.put(structs_acc, module_name, new_struct)
+          structs_count = if new_struct, do: 1, else: 0
 
           updated_stats =
             Stats.record_success(
@@ -162,20 +166,22 @@ defmodule CodeIntelligenceTracer.CLI do
               length(new_calls),
               map_size(new_locations),
               length(new_specs),
-              length(new_types)
+              length(new_types),
+              structs_count
             )
 
-          {calls_acc ++ new_calls, merged_locations, merged_specs, merged_types, updated_stats}
+          {calls_acc ++ new_calls, merged_locations, merged_specs, merged_types, merged_structs,
+           updated_stats}
 
         {:error, _reason} ->
           # Skip files that can't be processed
           updated_stats = Stats.record_failure(stats)
-          {calls_acc, locations_acc, specs_acc, types_acc, updated_stats}
+          {calls_acc, locations_acc, specs_acc, types_acc, structs_acc, updated_stats}
       end
     end)
   end
 
-  # Process a single BEAM file to extract calls, function locations, specs, and types
+  # Process a single BEAM file to extract calls, function locations, specs, types, and structs
   defp process_beam_file(beam_path, known_modules) do
     with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
          {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do
@@ -203,7 +209,10 @@ defmodule CodeIntelligenceTracer.CLI do
       # Extract types
       types = SpecExtractor.extract_types(chunks)
 
-      {:ok, {module_name, calls, functions, specs, types}}
+      # Extract struct definition
+      struct_info = StructExtractor.extract_struct(debug_info)
+
+      {:ok, {module_name, calls, functions, specs, types, struct_info}}
     end
   end
 

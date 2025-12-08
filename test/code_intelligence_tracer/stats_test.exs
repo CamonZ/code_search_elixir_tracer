@@ -103,7 +103,8 @@ defmodule CodeIntelligenceTracer.StatsTest do
                total_calls: 10,
                total_functions: 5,
                total_specs: 0,
-               total_types: 0
+               total_types: 0,
+               total_structs: 0
              }
     end
 
@@ -117,12 +118,13 @@ defmodule CodeIntelligenceTracer.StatsTest do
                total_calls: 0,
                total_functions: 0,
                total_specs: 0,
-               total_types: 0
+               total_types: 0,
+               total_structs: 0
              }
     end
   end
 
-  describe "record_success/5 with specs and types" do
+  describe "record_success/6 with specs, types, and structs" do
     test "tracks specs and types counts" do
       stats =
         Stats.new()
@@ -130,6 +132,7 @@ defmodule CodeIntelligenceTracer.StatsTest do
 
       assert stats.total_specs == 3
       assert stats.total_types == 2
+      assert stats.total_structs == 0
     end
 
     test "accumulates specs and types across multiple calls" do
@@ -140,6 +143,16 @@ defmodule CodeIntelligenceTracer.StatsTest do
 
       assert stats.total_specs == 8
       assert stats.total_types == 3
+    end
+
+    test "tracks struct counts" do
+      stats =
+        Stats.new()
+        |> Stats.record_success(10, 5, 3, 2, 1)
+        |> Stats.record_success(20, 8, 5, 1, 1)
+        |> Stats.record_success(5, 2, 0, 0, 0)
+
+      assert stats.total_structs == 2
     end
   end
 end

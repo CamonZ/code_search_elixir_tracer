@@ -10,10 +10,10 @@ Include struct definitions in JSON/TOON output.
 
 ## Acceptance Criteria
 
-- [ ] Add `structs` section organized by module
-- [ ] Add `total_structs` statistic
-- [ ] Update JSON output module
-- [ ] Update TOON output module
+- [x] Add `structs` section organized by module
+- [x] Add `total_structs` statistic
+- [x] Update JSON output module
+- [ ] Update TOON output module (deferred)
 
 ## Files to Modify
 

@@ -190,8 +190,8 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert new_spec.kind == :spec
       assert new_spec.line > 0
 
-      # Check record_success/5 (has default args so spec is arity 5)
-      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
+      # Check record_success/6 (has default args so spec is arity 6)
+      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 6))
       assert record_success_spec != nil
       assert record_success_spec.kind == :spec
     end
@@ -491,13 +491,13 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       specs = SpecExtractor.extract_specs(chunks)
 
-      # Parse record_success/5 spec (has default args so spec is arity 5)
-      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
+      # Parse record_success/6 spec (has default args so spec is arity 6)
+      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 6))
       [clause] = record_success_spec.clauses
       parsed = SpecExtractor.parse_spec_clause(clause)
 
-      # Should have 5 inputs: t(), non_neg_integer() x 4
-      assert length(parsed.inputs) == 5
+      # Should have 6 inputs: t(), non_neg_integer() x 5
+      assert length(parsed.inputs) == 6
 
       # First input should be t() (local type ref)
       assert %{type: :type_ref, module: nil, name: :t} = hd(parsed.inputs)
@@ -716,14 +716,14 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert clause.return_string == "t()"
       assert clause.full == "@spec new() :: t()"
 
-      # Format record_success/5 spec (has default args so spec is arity 5)
-      record_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
+      # Format record_success/6 spec (has default args so spec is arity 6)
+      record_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 6))
       formatted = SpecExtractor.format_spec(record_spec)
 
       [clause] = formatted.clauses
-      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
       assert clause.return_string == "t()"
-      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"
+      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"
     end
   end
 
@@ -932,9 +932,9 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert result["new/0"].spec != nil
       assert result["new/0"].spec.full == "@spec new() :: t()"
 
-      # record_success/5 should have spec (default args mean function has arities 3,4,5 but spec is arity 5)
-      assert result["record_success/5"].spec != nil
-      assert result["record_success/5"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+      # record_success/6 should have spec (default args mean function has arities 3,4,5,6 but spec is arity 6)
+      assert result["record_success/6"].spec != nil
+      assert result["record_success/6"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
     end
   end
 

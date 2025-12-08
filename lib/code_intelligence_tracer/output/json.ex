@@ -58,7 +58,8 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       calls: format_calls(results[:calls] || []),
       function_locations: format_function_locations(results[:function_locations] || %{}),
       specs: format_specs_by_module(results[:specs] || %{}),
-      types: format_types_by_module(results[:types] || %{})
+      types: format_types_by_module(results[:types] || %{}),
+      structs: format_structs_by_module(results[:structs] || %{})
     }
 
     Jason.encode!(output, pretty: true)
@@ -184,4 +185,16 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       definition: type_record.definition
     }
   end
+
+  # Format structs map for JSON output
+  # Organizes by module for easier lookup
+  defp format_structs_by_module(structs) when is_map(structs) do
+    structs
+    |> Enum.reject(fn {_module, struct_info} -> is_nil(struct_info) end)
+    |> Enum.into(%{}, fn {module, struct_info} ->
+      {module, struct_info}
+    end)
+  end
+
+  defp format_structs_by_module(_), do: %{}
 end
