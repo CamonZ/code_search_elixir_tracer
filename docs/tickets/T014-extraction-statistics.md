@@ -10,15 +10,15 @@ Calculate and include extraction statistics in output.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.Stats` module
-- [ ] Track during extraction:
+- [x] Create `CodeIntelligenceTracer.Stats` module
+- [x] Track during extraction:
   - `modules_processed` - total BEAM files processed
   - `modules_with_debug_info` - modules with Elixir debug info
   - `modules_without_debug_info` - modules without debug info
   - `total_calls` - number of call records
   - `total_functions` - number of function locations
-- [ ] Add `extraction_metadata` section to output
-- [ ] Update both JSON and TOON output modules
+- [x] Add `extraction_metadata` section to output
+- [ ] Update both JSON and TOON output modules (TOON deferred to T034)
 
 ## Files to Create
 

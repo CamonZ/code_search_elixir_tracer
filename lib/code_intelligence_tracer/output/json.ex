@@ -13,11 +13,20 @@ defmodule CodeIntelligenceTracer.Output.JSON do
         "generated_at": "2024-01-15T10:30:00Z",
         "project_path": "/path/to/project",
         "environment": "dev",
+        "extraction_metadata": {
+          "modules_processed": 50,
+          "modules_with_debug_info": 45,
+          "modules_without_debug_info": 5,
+          "total_calls": 1234,
+          "total_functions": 456
+        },
         "calls": [...],
         "function_locations": {...}
       }
 
   """
+
+  alias CodeIntelligenceTracer.Stats
 
   @doc """
   Generate JSON string from extraction results.
@@ -31,6 +40,7 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       - `:function_locations` - Map of module -> function locations
       - `:project_path` - Path to analyzed project
       - `:environment` - Build environment (dev/test/prod)
+      - `:stats` - Stats struct with extraction statistics
 
   ## Examples
 
@@ -44,12 +54,16 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       generated_at: DateTime.utc_now() |> DateTime.to_iso8601(),
       project_path: results[:project_path] || "",
       environment: results[:environment] || "dev",
+      extraction_metadata: format_stats(results[:stats]),
       calls: format_calls(results[:calls] || []),
       function_locations: format_function_locations(results[:function_locations] || %{})
     }
 
     Jason.encode!(output, pretty: true)
   end
+
+  defp format_stats(nil), do: Stats.to_map(Stats.new())
+  defp format_stats(%Stats{} = stats), do: Stats.to_map(stats)
 
   @doc """
   Write JSON string to a file.

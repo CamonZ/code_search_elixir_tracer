@@ -10,6 +10,7 @@ defmodule CodeIntelligenceTracer.CLI do
   alias CodeIntelligenceTracer.FunctionExtractor
   alias CodeIntelligenceTracer.Output
   alias CodeIntelligenceTracer.RunResult
+  alias CodeIntelligenceTracer.Stats
 
   @switches [
     output: :string,
@@ -76,7 +77,7 @@ defmodule CodeIntelligenceTracer.CLI do
       known_modules = BeamReader.collect_modules_from_apps(apps_to_process)
 
       # Extract calls and function locations from all BEAM files
-      {calls, function_locations, modules_processed} =
+      {calls, function_locations, stats} =
         extract_from_apps(apps_to_process, known_modules)
 
       # Generate and write output
@@ -86,7 +87,8 @@ defmodule CodeIntelligenceTracer.CLI do
         calls: calls,
         function_locations: function_locations,
         project_path: project_path,
-        environment: options.env
+        environment: options.env,
+        stats: stats
       }
 
       json_string = Output.JSON.generate(extraction_results)
@@ -102,7 +104,7 @@ defmodule CodeIntelligenceTracer.CLI do
           apps: apps,
           calls: calls,
           function_locations: function_locations,
-          modules_processed: modules_processed,
+          stats: stats,
           output_file: output_path
         )
 
@@ -142,15 +144,17 @@ defmodule CodeIntelligenceTracer.CLI do
     |> Enum.flat_map(fn {_app_name, ebin_path} ->
       BuildDiscovery.find_beam_files(ebin_path)
     end)
-    |> Enum.reduce({[], %{}, 0}, fn beam_path, {calls_acc, locations_acc, count} ->
+    |> Enum.reduce({[], %{}, Stats.new()}, fn beam_path, {calls_acc, locations_acc, stats} ->
       case process_beam_file(beam_path, known_modules) do
         {:ok, {new_calls, new_locations}} ->
           merged_locations = Map.merge(locations_acc, new_locations)
-          {calls_acc ++ new_calls, merged_locations, count + 1}
+          updated_stats = Stats.record_success(stats, length(new_calls), map_size(new_locations))
+          {calls_acc ++ new_calls, merged_locations, updated_stats}
 
         {:error, _reason} ->
           # Skip files that can't be processed
-          {calls_acc, locations_acc, count}
+          updated_stats = Stats.record_failure(stats)
+          {calls_acc, locations_acc, updated_stats}
       end
     end)
   end
