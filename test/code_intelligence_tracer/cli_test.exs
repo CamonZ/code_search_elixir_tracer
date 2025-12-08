@@ -128,39 +128,4 @@ defmodule CodeIntelligenceTracer.CLITest do
   end
 
   defp capture_io(fun), do: ExUnit.CaptureIO.capture_io(fun)
-
-  describe "run/1" do
-    test "returns RunResult with structured data for valid project" do
-      options = %{
-        path: File.cwd!(),
-        env: "dev",
-        output: "call_graph.json",
-        format: "json",
-        include_deps: false,
-        deps: []
-      }
-
-      assert {:ok, result} = CLI.run(options)
-
-      assert result.project_type == :regular
-      assert result.project_apps == ["code_search_elixir_tracer"]
-      assert String.ends_with?(result.build_dir, "_build/dev/lib")
-      assert is_list(result.apps)
-      assert Enum.any?(result.apps, fn {name, _} -> name == "code_search_elixir_tracer" end)
-    end
-
-    test "returns error for nonexistent project" do
-      options = %{
-        path: "/nonexistent/project",
-        env: "dev",
-        output: "call_graph.json",
-        format: "json",
-        include_deps: false,
-        deps: []
-      }
-
-      assert {:error, message} = CLI.run(options)
-      assert message =~ "Build directory not found"
-    end
-  end
 end

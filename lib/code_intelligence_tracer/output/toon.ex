@@ -1,4 +1,6 @@
 defmodule CodeIntelligenceTracer.Output.TOON do
+  alias CodeIntelligenceTracer.Extractor
+
   @moduledoc """
   Generates TOON output for call graph extraction results.
 
@@ -21,8 +23,6 @@ defmodule CodeIntelligenceTracer.Output.TOON do
 
   """
 
-  alias CodeIntelligenceTracer.Stats
-
   @doc """
   Generate TOON string from extraction results.
 
@@ -43,26 +43,23 @@ defmodule CodeIntelligenceTracer.Output.TOON do
       "generated_at: ...\\nproject_path: /foo\\n..."
 
   """
-  @spec generate(map()) :: String.t()
-  def generate(results) do
+  @spec generate(Extractor.t()) :: String.t()
+  def generate(%Extractor{} = extractor) do
     output = %{
       generated_at: DateTime.utc_now() |> DateTime.to_iso8601(),
-      project_path: results[:project_path] || "",
-      environment: results[:environment] || "dev",
-      extraction_metadata: format_stats(results[:stats]),
-      calls: format_calls(results[:calls] || []),
-      function_locations: format_function_locations(results[:function_locations] || %{}),
-      specs: format_specs_by_module(results[:specs] || %{}),
-      types: format_types_by_module(results[:types] || %{}),
-      structs: format_structs_by_module(results[:structs] || %{})
+      project_path: extractor.project_path || "",
+      environment: extractor.environment || "dev",
+      extraction_metadata: Map.from_struct(extractor.stats),
+      calls: format_calls(extractor.calls || []),
+      function_locations: format_function_locations(extractor.function_locations || %{}),
+      specs: format_specs_by_module(extractor.specs || %{}),
+      types: format_types_by_module(extractor.types || %{}),
+      structs: format_structs_by_module(extractor.structs || %{})
     }
 
     {:ok, toon_string} = Toon.encode(output)
     toon_string
   end
-
-  defp format_stats(nil), do: Stats.to_map(Stats.new())
-  defp format_stats(%Stats{} = stats), do: Stats.to_map(stats)
 
   @doc """
   Write TOON string to a file.

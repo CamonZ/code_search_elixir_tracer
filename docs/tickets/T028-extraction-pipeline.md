@@ -1,5 +1,7 @@
 # T028: Implement Full Extraction Pipeline
 
+**Status:** COMPLETED
+
 **Priority:** P0 | **Phase:** 10 - Integration & Polish
 **Features:** F1-F10
 **Depends On:** T001-T027
@@ -11,7 +13,8 @@ Wire together all components in the main extraction pipeline.
 ## Acceptance Criteria
 
 - [x] Create `CodeIntelligenceTracer.Extractor` module
-  - **Implemented directly in CLI.run/1 instead of separate module**
+  - **Created lib/code_intelligence_tracer/extractor.ex**
+  - **Contains extraction logic refactored from CLI**
 - [x] Implement `run/1` (options) orchestration:
   1. Find build directory
   2. List and filter app directories
@@ -23,23 +26,26 @@ Wire together all components in the main extraction pipeline.
   6. Correlate specs with functions
   7. Calculate statistics
   8. Return complete extraction result
-  - **All steps implemented in CLI.run/1 and extract_from_apps/2**
-- [x] Wire CLI to call Extractor.run/1
-  - **CLI.main/1 calls CLI.run/1 directly**
+  - **Extractor.extract/4 handles all extraction**
+  - **Extractor.select_apps_to_process/3 handles app filtering**
+  - **Parallel processing via Task.async_stream**
+- [x] Wire CLI to call Extractor
+  - **CLI.run/1 calls Extractor.extract/4**
 - [x] Generate output using appropriate format (JSON or TOON)
-  - **Output.JSON.generate/1 implemented**
+  - **Output.JSON.generate/1 and Output.TOON.generate/1 implemented**
 - [x] Write output to file
-  - **Output.JSON.write_file/2 implemented**
+  - **Output.JSON.write_file/2 and Output.TOON.write_file/2 implemented**
 - [x] Print summary to console
   - **RunResult.print/1 prints extraction summary**
 
-## Files to Create
+## Files Created
 
 - `lib/code_intelligence_tracer/extractor.ex`
+- `test/code_intelligence_tracer/extractor_test.exs`
 
-## Files to Modify
+## Files Modified
 
-- `lib/code_intelligence_tracer/cli.ex`
+- `lib/code_intelligence_tracer/cli.ex` - Now delegates to Extractor
 
 ## Extraction Result Structure
 

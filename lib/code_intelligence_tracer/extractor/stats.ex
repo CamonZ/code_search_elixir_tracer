@@ -1,4 +1,4 @@
-defmodule CodeIntelligenceTracer.Stats do
+defmodule CodeIntelligenceTracer.Extractor.Stats do
   @moduledoc """
   Tracks extraction statistics during call graph analysis.
 
@@ -12,6 +12,7 @@ defmodule CodeIntelligenceTracer.Stats do
   - `modules_without_debug_info` - Modules skipped (no debug info or errors)
   - `total_calls` - Number of call records extracted
   - `total_functions` - Number of function locations indexed
+  - `extraction_time_ms` - Time taken for extraction in milliseconds
   """
 
   defstruct modules_processed: 0,
@@ -21,7 +22,8 @@ defmodule CodeIntelligenceTracer.Stats do
             total_functions: 0,
             total_specs: 0,
             total_types: 0,
-            total_structs: 0
+            total_structs: 0,
+            extraction_time_ms: nil
 
   @type t :: %__MODULE__{
           modules_processed: non_neg_integer(),
@@ -31,7 +33,8 @@ defmodule CodeIntelligenceTracer.Stats do
           total_functions: non_neg_integer(),
           total_specs: non_neg_integer(),
           total_types: non_neg_integer(),
-          total_structs: non_neg_integer()
+          total_structs: non_neg_integer(),
+          extraction_time_ms: non_neg_integer() | nil
         }
 
   @doc """
@@ -89,19 +92,10 @@ defmodule CodeIntelligenceTracer.Stats do
   end
 
   @doc """
-  Convert stats to a map suitable for JSON output.
+  Set the extraction time in milliseconds.
   """
-  @spec to_map(t()) :: map()
-  def to_map(%__MODULE__{} = stats) do
-    %{
-      modules_processed: stats.modules_processed,
-      modules_with_debug_info: stats.modules_with_debug_info,
-      modules_without_debug_info: stats.modules_without_debug_info,
-      total_calls: stats.total_calls,
-      total_functions: stats.total_functions,
-      total_specs: stats.total_specs,
-      total_types: stats.total_types,
-      total_structs: stats.total_structs
-    }
+  @spec set_extraction_time(t(), non_neg_integer()) :: t()
+  def set_extraction_time(%__MODULE__{} = stats, time_ms) do
+    %{stats | extraction_time_ms: time_ms}
   end
 end

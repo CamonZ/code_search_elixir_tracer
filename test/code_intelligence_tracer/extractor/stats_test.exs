@@ -1,7 +1,7 @@
-defmodule CodeIntelligenceTracer.StatsTest do
+defmodule CodeIntelligenceTracer.Extractor.StatsTest do
   use ExUnit.Case, async: true
 
-  alias CodeIntelligenceTracer.Stats
+  alias CodeIntelligenceTracer.Extractor.Stats
 
   describe "new/0" do
     test "creates stats with zero counts" do
@@ -14,6 +14,7 @@ defmodule CodeIntelligenceTracer.StatsTest do
       assert stats.total_functions == 0
       assert stats.total_specs == 0
       assert stats.total_types == 0
+      assert stats.extraction_time_ms == nil
     end
   end
 
@@ -87,40 +88,23 @@ defmodule CodeIntelligenceTracer.StatsTest do
     end
   end
 
-  describe "to_map/1" do
-    test "converts stats to map" do
+  describe "set_extraction_time/2" do
+    test "sets extraction time in milliseconds" do
+      stats =
+        Stats.new()
+        |> Stats.set_extraction_time(1234)
+
+      assert stats.extraction_time_ms == 1234
+    end
+
+    test "can be called after recording successes" do
       stats =
         Stats.new()
         |> Stats.record_success(10, 5)
-        |> Stats.record_failure()
+        |> Stats.set_extraction_time(500)
 
-      map = Stats.to_map(stats)
-
-      assert map == %{
-               modules_processed: 2,
-               modules_with_debug_info: 1,
-               modules_without_debug_info: 1,
-               total_calls: 10,
-               total_functions: 5,
-               total_specs: 0,
-               total_types: 0,
-               total_structs: 0
-             }
-    end
-
-    test "handles zero counts" do
-      map = Stats.to_map(Stats.new())
-
-      assert map == %{
-               modules_processed: 0,
-               modules_with_debug_info: 0,
-               modules_without_debug_info: 0,
-               total_calls: 0,
-               total_functions: 0,
-               total_specs: 0,
-               total_types: 0,
-               total_structs: 0
-             }
+      assert stats.extraction_time_ms == 500
+      assert stats.total_calls == 10
     end
   end
 

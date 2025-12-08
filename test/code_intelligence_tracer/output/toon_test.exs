@@ -1,32 +1,39 @@
 defmodule CodeIntelligenceTracer.Output.TOONTest do
   use ExUnit.Case, async: true
 
+  alias CodeIntelligenceTracer.Extractor
+  alias CodeIntelligenceTracer.Extractor.Stats
   alias CodeIntelligenceTracer.Output.TOON
+
+  defp build_extractor(attrs \\ %{}) do
+    defaults = %{
+      calls: [],
+      function_locations: %{},
+      specs: %{},
+      types: %{},
+      structs: %{},
+      project_path: "/test/project",
+      environment: "dev",
+      stats: Stats.new()
+    }
+
+    struct(Extractor, Map.merge(defaults, attrs))
+  end
 
   describe "generate/1" do
     test "outputs valid TOON" do
-      results = %{
-        calls: [],
-        function_locations: %{},
-        project_path: "/test/project",
-        environment: "dev"
-      }
+      extractor = build_extractor()
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
 
       # TOON should be decodable
       assert {:ok, _decoded} = Toon.decode(toon_string)
     end
 
     test "includes all required metadata fields" do
-      results = %{
-        calls: [],
-        function_locations: %{},
-        project_path: "/test/project",
-        environment: "test"
-      }
+      extractor = build_extractor(%{project_path: "/test/project", environment: "test"})
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
       assert Map.has_key?(decoded, "generated_at")
@@ -40,9 +47,9 @@ defmodule CodeIntelligenceTracer.Output.TOONTest do
     end
 
     test "generated_at is valid ISO8601 timestamp" do
-      results = %{calls: [], function_locations: %{}}
+      extractor = build_extractor()
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
       assert {:ok, _datetime, _offset} = DateTime.from_iso8601(decoded["generated_at"])
@@ -67,9 +74,9 @@ defmodule CodeIntelligenceTracer.Output.TOONTest do
         }
       ]
 
-      results = %{calls: calls, function_locations: %{}}
+      extractor = build_extractor(%{calls: calls})
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
       assert length(decoded["calls"]) == 1
@@ -106,9 +113,9 @@ defmodule CodeIntelligenceTracer.Output.TOONTest do
         }
       }
 
-      results = %{calls: [], function_locations: locations}
+      extractor = build_extractor(%{function_locations: locations})
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
       # Should be organized by module
@@ -124,16 +131,22 @@ defmodule CodeIntelligenceTracer.Output.TOONTest do
       assert process["kind"] == "def"
     end
 
-    test "handles empty results" do
-      results = %{}
+    test "includes extraction metadata from stats" do
+      stats =
+        Stats.new()
+        |> Stats.record_success(10, 5, 2, 1, 1)
+        |> Stats.set_extraction_time(500)
 
-      toon_string = TOON.generate(results)
+      extractor = build_extractor(%{stats: stats})
+
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
-      assert decoded["calls"] == []
-      assert decoded["function_locations"] == %{}
-      assert decoded["project_path"] == ""
-      assert decoded["environment"] == "dev"
+      metadata = decoded["extraction_metadata"]
+      assert metadata["modules_processed"] == 1
+      assert metadata["total_calls"] == 10
+      assert metadata["total_functions"] == 5
+      assert metadata["extraction_time_ms"] == 500
     end
 
     test "converts atom types to strings" do
@@ -155,9 +168,9 @@ defmodule CodeIntelligenceTracer.Output.TOONTest do
         }
       ]
 
-      results = %{calls: calls, function_locations: %{}}
+      extractor = build_extractor(%{calls: calls})
 
-      toon_string = TOON.generate(results)
+      toon_string = TOON.generate(extractor)
       {:ok, decoded} = Toon.decode(toon_string)
 
       [call] = decoded["calls"]
