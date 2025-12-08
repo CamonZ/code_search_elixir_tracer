@@ -1,56 +1,121 @@
-defmodule CodeIntelligenceTracer.Output.JSON do
-  alias CodeIntelligenceTracer.Extractor
-
+defmodule CodeIntelligenceTracer.Output do
   @moduledoc """
-  Generates JSON output for call graph extraction results.
+  Generates output for call graph extraction results.
 
-  Produces a structured JSON document containing:
-  - Metadata (timestamp, project path, environment)
-  - Function calls with caller/callee information
-  - Function locations organized by module
+  Supports multiple output formats (JSON, TOON) with a unified API.
+  All formatting logic is shared between formats - only the final
+  serialization differs.
+
+  ## Supported Formats
+
+  - `"json"` - Pretty-printed JSON via Jason
+  - `"toon"` - Token-Oriented Object Notation for LLM consumption
 
   ## Output Structure
+
+  Both formats produce the same logical structure:
 
       {
         "generated_at": "2024-01-15T10:30:00Z",
         "project_path": "/path/to/project",
         "environment": "dev",
-        "extraction_metadata": {
-          "modules_processed": 50,
-          "modules_with_debug_info": 45,
-          "modules_without_debug_info": 5,
-          "total_calls": 1234,
-          "total_functions": 456
-        },
+        "extraction_metadata": {...},
         "calls": [...],
-        "function_locations": {...}
+        "function_locations": {...},
+        "specs": {...},
+        "types": {...},
+        "structs": {...}
       }
 
   """
 
+  alias CodeIntelligenceTracer.Extractor
+
+  @serializers %{
+    "json" => Jason,
+    "toon" => Toon
+  }
+
+  @type format :: String.t()
+
   @doc """
-  Generate JSON string from extraction results.
-
-  Takes a map containing extraction data and returns a pretty-printed JSON string.
-
-  ## Parameters
-
-    - `results` - Map with keys:
-      - `:calls` - List of call records
-      - `:function_locations` - Map of module -> function locations
-      - `:project_path` - Path to analyzed project
-      - `:environment` - Build environment (dev/test/prod)
-      - `:stats` - Stats struct with extraction statistics
+  Returns the default output filename for the given format.
 
   ## Examples
 
-      iex> generate(%{calls: [], function_locations: %{}, project_path: "/foo", environment: "dev"})
-      "{\\n  \\"generated_at\\": \\"...\\",\\n  ...\\n}"
+      iex> default_filename("json")
+      "extracted_trace.json"
+
+      iex> default_filename("toon")
+      "extracted_trace.toon"
 
   """
-  @spec generate(Extractor.t()) :: String.t()
-  def generate(%Extractor{} = extractor) do
-    output = %{
+  @spec default_filename(format()) :: String.t()
+  def default_filename(format), do: "extracted_trace.#{format}"
+
+  @doc """
+  Returns the file extension for the given format.
+
+  ## Examples
+
+      iex> extension("json")
+      ".json"
+
+      iex> extension("toon")
+      ".toon"
+
+  """
+  @spec extension(format()) :: String.t()
+  def extension(format), do: ".#{format}"
+
+  @doc """
+  Generate output string from extraction results in the specified format.
+
+  ## Parameters
+
+    - `extractor` - The Extractor struct with extraction results
+    - `format` - Output format: "json" or "toon"
+
+  ## Returns
+
+  A string in the specified format.
+  """
+  @spec generate(Extractor.t(), format()) :: String.t()
+  def generate(%Extractor{} = extractor, format) do
+    output = build_output_map(extractor)
+    serialize(output, format)
+  end
+
+  @doc """
+  Generate and write output to a file.
+
+  Creates parent directories if they don't exist.
+
+  ## Parameters
+
+    - `extractor` - The Extractor struct with extraction results
+    - `output_path` - Path to the output file
+    - `format` - Output format: "json" or "toon"
+
+  ## Returns
+
+    - `:ok` on success
+    - `{:error, reason}` on failure
+  """
+  @spec write(Extractor.t(), String.t(), format()) :: :ok | {:error, term()}
+  def write(%Extractor{} = extractor, output_path, format) do
+    output_string = generate(extractor, format)
+
+    output_path
+    |> Path.dirname()
+    |> File.mkdir_p()
+
+    File.write(output_path, output_string)
+  end
+
+  # Build the output map from extractor results
+  defp build_output_map(%Extractor{} = extractor) do
+    %{
       generated_at: DateTime.utc_now() |> DateTime.to_iso8601(),
       project_path: extractor.project_path || "",
       environment: extractor.environment || "dev",
@@ -61,36 +126,15 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       types: format_types_by_module(extractor.types || %{}),
       structs: format_structs_by_module(extractor.structs || %{})
     }
-
-    Jason.encode!(output, pretty: true)
   end
 
-  @doc """
-  Write JSON string to a file.
-
-  Creates parent directories if they don't exist.
-
-  ## Parameters
-
-    - `json_string` - The JSON content to write
-    - `output_path` - Path to the output file
-
-  ## Returns
-
-    - `:ok` on success
-    - `{:error, reason}` on failure
-
-  """
-  @spec write_file(String.t(), String.t()) :: :ok | {:error, term()}
-  def write_file(json_string, output_path) do
-    output_path
-    |> Path.dirname()
-    |> File.mkdir_p()
-
-    File.write(output_path, json_string)
+  # Serialize to the specified format
+  defp serialize(output, format) do
+    serializer = Map.get(@serializers, format)
+    serializer.encode!(output)
   end
 
-  # Format calls list for JSON output
+  # Format calls list for output
   defp format_calls(calls) do
     Enum.map(calls, fn call ->
       %{
@@ -111,7 +155,7 @@ defmodule CodeIntelligenceTracer.Output.JSON do
     end)
   end
 
-  # Format function locations map for JSON output
+  # Format function locations map for output
   # Organizes by module for easier lookup
   defp format_function_locations(locations) do
     locations
@@ -133,7 +177,7 @@ defmodule CodeIntelligenceTracer.Output.JSON do
     }
   end
 
-  # Format specs map for JSON output
+  # Format specs map for output
   # Organizes by module for easier lookup
   defp format_specs_by_module(specs) when is_map(specs) do
     specs
@@ -162,7 +206,7 @@ defmodule CodeIntelligenceTracer.Output.JSON do
     }
   end
 
-  # Format types map for JSON output
+  # Format types map for output
   # Organizes by module for easier lookup
   defp format_types_by_module(types) when is_map(types) do
     types
@@ -183,7 +227,7 @@ defmodule CodeIntelligenceTracer.Output.JSON do
     }
   end
 
-  # Format structs map for JSON output
+  # Format structs map for output
   # Organizes by module for easier lookup
   defp format_structs_by_module(structs) when is_map(structs) do
     structs

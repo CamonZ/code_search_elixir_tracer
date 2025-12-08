@@ -26,7 +26,7 @@ defmodule CodeIntelligenceTracer.CLI do
   ]
 
   @default_options %{
-    output: "extracted_trace.json",
+    output: nil,
     format: "json",
     include_deps: false,
     deps: [],
@@ -62,26 +62,22 @@ defmodule CodeIntelligenceTracer.CLI do
   defp check_help(%{help: true}), do: :help
   defp check_help(_options), do: :ok
 
-  defp resolve_output_path(%{output: output}, extractor) do
-    if Path.type(output) == :absolute do
-      output
+  defp resolve_output_path(%{output: output, format: format}, extractor) do
+    filename = output || Output.default_filename(format)
+
+    if Path.type(filename) == :absolute do
+      filename
     else
       base_path = output_base_path(extractor)
-      Path.join(base_path, output)
+      Path.join(base_path, filename)
     end
   end
 
   defp output_base_path(%Extractor{project_type: nil}), do: File.cwd!()
   defp output_base_path(%Extractor{project_path: project_path}), do: project_path
 
-  defp write_output(extractor, output_path, "json") do
-    json_string = Output.JSON.generate(extractor)
-    Output.JSON.write_file(json_string, output_path)
-  end
-
-  defp write_output(extractor, output_path, "toon") do
-    toon_string = Output.TOON.generate(extractor)
-    Output.TOON.write_file(toon_string, output_path)
+  defp write_output(extractor, output_path, format) do
+    Output.write(extractor, output_path, format)
   end
 
   @doc """
@@ -161,7 +157,7 @@ defmodule CodeIntelligenceTracer.CLI do
       PATH                    Path to the Elixir project (default: ".")
 
     Options:
-      -o, --output FILE       Output file path (default: "extracted_trace.json")
+      -o, --output FILE       Output file path (default: "extracted_trace.<format>")
       -F, --format FORMAT     Output format: "json" or "toon" (default: "json")
       -f, --file BEAM_FILE    Process specific BEAM file(s) instead of a project
                               (can be specified multiple times)

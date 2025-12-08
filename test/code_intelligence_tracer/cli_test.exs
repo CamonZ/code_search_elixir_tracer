@@ -7,7 +7,7 @@ defmodule CodeIntelligenceTracer.CLITest do
     test "empty args returns defaults" do
       assert {:ok, options} = CLI.parse_args([])
 
-      assert options.output == "extracted_trace.json"
+      assert options.output == nil
       assert options.format == "json"
       assert options.include_deps == false
       assert options.deps == []
