@@ -18,14 +18,18 @@ defmodule CodeIntelligenceTracer.Stats do
             modules_with_debug_info: 0,
             modules_without_debug_info: 0,
             total_calls: 0,
-            total_functions: 0
+            total_functions: 0,
+            total_specs: 0,
+            total_types: 0
 
   @type t :: %__MODULE__{
           modules_processed: non_neg_integer(),
           modules_with_debug_info: non_neg_integer(),
           modules_without_debug_info: non_neg_integer(),
           total_calls: non_neg_integer(),
-          total_functions: non_neg_integer()
+          total_functions: non_neg_integer(),
+          total_specs: non_neg_integer(),
+          total_types: non_neg_integer()
         }
 
   @doc """
@@ -40,14 +44,23 @@ defmodule CodeIntelligenceTracer.Stats do
   Increments `modules_processed` and `modules_with_debug_info`,
   and adds the call and function counts.
   """
-  @spec record_success(t(), non_neg_integer(), non_neg_integer()) :: t()
-  def record_success(%__MODULE__{} = stats, calls_count, functions_count) do
+  @spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
+          t()
+  def record_success(
+        %__MODULE__{} = stats,
+        calls_count,
+        functions_count,
+        specs_count \\ 0,
+        types_count \\ 0
+      ) do
     %{
       stats
       | modules_processed: stats.modules_processed + 1,
         modules_with_debug_info: stats.modules_with_debug_info + 1,
         total_calls: stats.total_calls + calls_count,
-        total_functions: stats.total_functions + functions_count
+        total_functions: stats.total_functions + functions_count,
+        total_specs: stats.total_specs + specs_count,
+        total_types: stats.total_types + types_count
     }
   end
 
@@ -75,7 +88,9 @@ defmodule CodeIntelligenceTracer.Stats do
       modules_with_debug_info: stats.modules_with_debug_info,
       modules_without_debug_info: stats.modules_without_debug_info,
       total_calls: stats.total_calls,
-      total_functions: stats.total_functions
+      total_functions: stats.total_functions,
+      total_specs: stats.total_specs,
+      total_types: stats.total_types
     }
   end
 end

@@ -56,7 +56,9 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       environment: results[:environment] || "dev",
       extraction_metadata: format_stats(results[:stats]),
       calls: format_calls(results[:calls] || []),
-      function_locations: format_function_locations(results[:function_locations] || %{})
+      function_locations: format_function_locations(results[:function_locations] || %{}),
+      specs: format_specs_by_module(results[:specs] || %{}),
+      types: format_types_by_module(results[:types] || %{})
     }
 
     Jason.encode!(output, pretty: true)
@@ -130,6 +132,56 @@ defmodule CodeIntelligenceTracer.Output.JSON do
       kind: to_string(info.kind),
       source_file: info.source_file,
       source_file_absolute: info.source_file_absolute
+    }
+  end
+
+  # Format specs map for JSON output
+  # Organizes by module for easier lookup
+  defp format_specs_by_module(specs) when is_map(specs) do
+    specs
+    |> Enum.into(%{}, fn {module, module_specs} ->
+      {module, Enum.map(module_specs, &format_spec_record/1)}
+    end)
+  end
+
+  defp format_specs_by_module(_), do: %{}
+
+  defp format_spec_record(spec) do
+    %{
+      name: spec.name,
+      arity: spec.arity,
+      kind: to_string(spec.kind),
+      line: spec.line,
+      clauses: Enum.map(spec.clauses, &format_spec_clause/1)
+    }
+  end
+
+  defp format_spec_clause(clause) do
+    %{
+      inputs_string: clause.inputs_string,
+      return_string: clause.return_string,
+      full: clause.full
+    }
+  end
+
+  # Format types map for JSON output
+  # Organizes by module for easier lookup
+  defp format_types_by_module(types) when is_map(types) do
+    types
+    |> Enum.into(%{}, fn {module, module_types} ->
+      {module, Enum.map(module_types, &format_type_record/1)}
+    end)
+  end
+
+  defp format_types_by_module(_), do: %{}
+
+  defp format_type_record(type_record) do
+    %{
+      name: type_record.name,
+      kind: to_string(type_record.kind),
+      params: type_record.params,
+      line: type_record.line,
+      definition: type_record.definition
     }
   end
 end

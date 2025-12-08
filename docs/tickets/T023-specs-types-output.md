@@ -10,13 +10,13 @@ Include specs and types in JSON/TOON output.
 
 ## Acceptance Criteria
 
-- [ ] Add `specs` section organized by module
-- [ ] Add `types` section organized by module
-- [ ] Add statistics:
+- [x] Add `specs` section organized by module
+- [x] Add `types` section organized by module
+- [x] Add statistics:
   - `total_specs`
   - `total_types`
-- [ ] Update JSON output module
-- [ ] Update TOON output module
+- [x] Update JSON output module
+- [ ] Update TOON output module (deferred)
 
 ## Files to Modify
 

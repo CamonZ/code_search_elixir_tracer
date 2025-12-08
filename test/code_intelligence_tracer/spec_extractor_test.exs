@@ -190,8 +190,8 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert new_spec.kind == :spec
       assert new_spec.line > 0
 
-      # Check record_success/3
-      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 3))
+      # Check record_success/5 (has default args so spec is arity 5)
+      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
       assert record_success_spec != nil
       assert record_success_spec.kind == :spec
     end
@@ -491,13 +491,13 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
       specs = SpecExtractor.extract_specs(chunks)
 
-      # Parse record_success/3 spec
-      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 3))
+      # Parse record_success/5 spec (has default args so spec is arity 5)
+      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
       [clause] = record_success_spec.clauses
       parsed = SpecExtractor.parse_spec_clause(clause)
 
-      # Should have 3 inputs: t(), non_neg_integer(), non_neg_integer()
-      assert length(parsed.inputs) == 3
+      # Should have 5 inputs: t(), non_neg_integer() x 4
+      assert length(parsed.inputs) == 5
 
       # First input should be t() (local type ref)
       assert %{type: :type_ref, module: nil, name: :t} = hd(parsed.inputs)
@@ -716,14 +716,14 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert clause.return_string == "t()"
       assert clause.full == "@spec new() :: t()"
 
-      # Format record_success/3 spec
-      record_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 3))
+      # Format record_success/5 spec (has default args so spec is arity 5)
+      record_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 5))
       formatted = SpecExtractor.format_spec(record_spec)
 
       [clause] = formatted.clauses
-      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()"]
+      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
       assert clause.return_string == "t()"
-      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer()) :: t()"
+      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"
     end
   end
 
@@ -932,9 +932,141 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert result["new/0"].spec != nil
       assert result["new/0"].spec.full == "@spec new() :: t()"
 
-      # record_success/3 should have spec
-      assert result["record_success/3"].spec != nil
-      assert result["record_success/3"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()"]
+      # record_success/5 should have spec (default args mean function has arities 3,4,5 but spec is arity 5)
+      assert result["record_success/5"].spec != nil
+      assert result["record_success/5"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+    end
+  end
+
+  # =============================================================================
+  # T022: extract_types/1 tests
+  # =============================================================================
+
+  describe "extract_types/1" do
+    test "extracts type definitions" do
+      abstract_code =
+        {:raw_abstract_v1,
+         [
+           {:attribute, 1, :module, TestModule},
+           {:attribute, 5, :type, {:my_type, {:type, {5, 20}, :integer, []}, []}}
+         ]}
+
+      chunks = %{abstract_code: abstract_code}
+      types = SpecExtractor.extract_types(chunks)
+
+      assert length(types) == 1
+      [type_def] = types
+
+      assert type_def.name == :my_type
+      assert type_def.kind == :type
+      assert type_def.params == []
+      assert type_def.line == 5
+      assert type_def.definition == "@type my_type() :: integer()"
+    end
+
+    test "extracts opaque type definitions" do
+      abstract_code =
+        {:raw_abstract_v1,
+         [
+           {:attribute, 1, :module, TestModule},
+           {:attribute, 10, :opaque, {:secret, {:type, {10, 25}, :term, []}, []}}
+         ]}
+
+      chunks = %{abstract_code: abstract_code}
+      types = SpecExtractor.extract_types(chunks)
+
+      assert length(types) == 1
+      [type_def] = types
+
+      assert type_def.name == :secret
+      assert type_def.kind == :opaque
+      assert type_def.definition == "@opaque secret() :: term()"
+    end
+
+    test "extracts parameterized types" do
+      abstract_code =
+        {:raw_abstract_v1,
+         [
+           {:attribute, 1, :module, TestModule},
+           {:attribute, 15, :type,
+            {:result,
+             {:type, {15, 30}, :union,
+              [
+                {:type, {15, 30}, :tuple,
+                 [{:atom, 0, :ok}, {:var, {15, 36}, :a}]},
+                {:type, {15, 45}, :tuple,
+                 [{:atom, 0, :error}, {:var, {15, 55}, :b}]}
+              ]},
+             [{:var, {15, 20}, :a}, {:var, {15, 23}, :b}]}}
+         ]}
+
+      chunks = %{abstract_code: abstract_code}
+      types = SpecExtractor.extract_types(chunks)
+
+      assert length(types) == 1
+      [type_def] = types
+
+      assert type_def.name == :result
+      assert type_def.kind == :type
+      assert type_def.params == [:a, :b]
+      assert type_def.definition == "@type result(a, b) :: {:ok, a} | {:error, b}"
+    end
+
+    test "extracts both types and opaques" do
+      abstract_code =
+        {:raw_abstract_v1,
+         [
+           {:attribute, 1, :module, TestModule},
+           {:attribute, 5, :type, {:public, {:type, {5, 20}, :integer, []}, []}},
+           {:attribute, 10, :opaque, {:private, {:type, {10, 25}, :binary, []}, []}}
+         ]}
+
+      chunks = %{abstract_code: abstract_code}
+      types = SpecExtractor.extract_types(chunks)
+
+      assert length(types) == 2
+
+      public_type = Enum.find(types, &(&1.kind == :type))
+      opaque_type = Enum.find(types, &(&1.kind == :opaque))
+
+      assert public_type.name == :public
+      assert opaque_type.name == :private
+    end
+
+    test "returns empty list when no abstract_code chunk" do
+      chunks = %{abstract_code: nil}
+      assert SpecExtractor.extract_types(chunks) == []
+    end
+
+    test "handles modules without types" do
+      abstract_code =
+        {:raw_abstract_v1,
+         [
+           {:attribute, 1, :module, TestModule},
+           {:function, 5, :some_func, 0, [{:clause, 5, [], [], [{:atom, 5, :ok}]}]}
+         ]}
+
+      chunks = %{abstract_code: abstract_code}
+      assert SpecExtractor.extract_types(chunks) == []
+    end
+  end
+
+  describe "extract_types/1 with real BEAM data" do
+    test "extracts types from Stats module" do
+      beam_path =
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+
+      {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
+      types = SpecExtractor.extract_types(chunks)
+
+      # Stats module has @type t
+      assert length(types) >= 1
+
+      t_type = Enum.find(types, &(&1.name == :t))
+      assert t_type != nil
+      assert t_type.kind == :type
+      assert t_type.params == []
+      assert String.starts_with?(t_type.definition, "@type t() ::")
     end
   end
 end

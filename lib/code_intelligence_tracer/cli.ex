@@ -10,6 +10,7 @@ defmodule CodeIntelligenceTracer.CLI do
   alias CodeIntelligenceTracer.FunctionExtractor
   alias CodeIntelligenceTracer.Output
   alias CodeIntelligenceTracer.RunResult
+  alias CodeIntelligenceTracer.SpecExtractor
   alias CodeIntelligenceTracer.Stats
 
   @switches [
@@ -76,8 +77,8 @@ defmodule CodeIntelligenceTracer.CLI do
       # Collect known modules for filtering
       known_modules = BeamReader.collect_modules_from_apps(apps_to_process)
 
-      # Extract calls and function locations from all BEAM files
-      {calls, function_locations, stats} =
+      # Extract calls, function locations, specs, and types from all BEAM files
+      {calls, function_locations, specs, types, stats} =
         extract_from_apps(apps_to_process, known_modules)
 
       # Generate and write output
@@ -86,6 +87,8 @@ defmodule CodeIntelligenceTracer.CLI do
       extraction_results = %{
         calls: calls,
         function_locations: function_locations,
+        specs: specs,
+        types: types,
         project_path: project_path,
         environment: options.env,
         stats: stats
@@ -138,32 +141,46 @@ defmodule CodeIntelligenceTracer.CLI do
     end
   end
 
-  # Extract calls and function locations from all apps
+  # Extract calls, function locations, specs, and types from all apps
   defp extract_from_apps(apps, known_modules) do
     apps
     |> Enum.flat_map(fn {_app_name, ebin_path} ->
       BuildDiscovery.find_beam_files(ebin_path)
     end)
-    |> Enum.reduce({[], %{}, Stats.new()}, fn beam_path, {calls_acc, locations_acc, stats} ->
+    |> Enum.reduce({[], %{}, %{}, %{}, Stats.new()}, fn beam_path,
+                                                        {calls_acc, locations_acc, specs_acc,
+                                                         types_acc, stats} ->
       case process_beam_file(beam_path, known_modules) do
-        {:ok, {new_calls, new_locations}} ->
+        {:ok, {module_name, new_calls, new_locations, new_specs, new_types}} ->
           merged_locations = Map.merge(locations_acc, new_locations)
-          updated_stats = Stats.record_success(stats, length(new_calls), map_size(new_locations))
-          {calls_acc ++ new_calls, merged_locations, updated_stats}
+          merged_specs = Map.put(specs_acc, module_name, new_specs)
+          merged_types = Map.put(types_acc, module_name, new_types)
+
+          updated_stats =
+            Stats.record_success(
+              stats,
+              length(new_calls),
+              map_size(new_locations),
+              length(new_specs),
+              length(new_types)
+            )
+
+          {calls_acc ++ new_calls, merged_locations, merged_specs, merged_types, updated_stats}
 
         {:error, _reason} ->
           # Skip files that can't be processed
           updated_stats = Stats.record_failure(stats)
-          {calls_acc, locations_acc, updated_stats}
+          {calls_acc, locations_acc, specs_acc, types_acc, updated_stats}
       end
     end)
   end
 
-  # Process a single BEAM file to extract calls and function locations
+  # Process a single BEAM file to extract calls, function locations, specs, and types
   defp process_beam_file(beam_path, known_modules) do
     with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
          {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do
       source_file = debug_info[:file] || ""
+      module_name = module_to_string(module)
 
       # Extract function calls
       calls =
@@ -177,7 +194,16 @@ defmodule CodeIntelligenceTracer.CLI do
         |> FunctionExtractor.extract_functions(source_file)
         |> add_module_to_locations(module)
 
-      {:ok, {calls, functions}}
+      # Extract specs and format them
+      specs =
+        chunks
+        |> SpecExtractor.extract_specs()
+        |> Enum.map(&SpecExtractor.format_spec/1)
+
+      # Extract types
+      types = SpecExtractor.extract_types(chunks)
+
+      {:ok, {module_name, calls, functions, specs, types}}
     end
   end
 
