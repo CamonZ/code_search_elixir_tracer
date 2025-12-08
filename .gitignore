@@ -22,4 +22,9 @@ code_search_elixir_tracer-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# Escript binary
 call_graph
+
+# Generated output files
+*.json
+!mix.lock

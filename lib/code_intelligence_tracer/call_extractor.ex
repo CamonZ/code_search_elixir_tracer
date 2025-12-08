@@ -94,6 +94,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     :{},
     :when,
     :->,
+    :<-,
     # Operators
     :=,
     :==,

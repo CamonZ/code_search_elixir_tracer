@@ -3,7 +3,12 @@ defmodule CodeIntelligenceTracer.CLI do
   Command-line interface for the code intelligence tracer.
   """
 
+  alias CodeIntelligenceTracer.BeamReader
   alias CodeIntelligenceTracer.BuildDiscovery
+  alias CodeIntelligenceTracer.CallExtractor
+  alias CodeIntelligenceTracer.CallFilter
+  alias CodeIntelligenceTracer.FunctionExtractor
+  alias CodeIntelligenceTracer.Output
   alias CodeIntelligenceTracer.RunResult
 
   @switches [
@@ -60,19 +65,140 @@ defmodule CodeIntelligenceTracer.CLI do
   def run(options) do
     with {:ok, build_lib_path} <- BuildDiscovery.find_build_dir(options.path, options.env),
          {:ok, project_apps} <- BuildDiscovery.find_project_apps(options.path) do
+      project_path = Path.expand(options.path)
       apps = BuildDiscovery.list_app_directories(build_lib_path)
       project_type = BuildDiscovery.detect_project_type(options.path)
+
+      # Determine which apps to process based on options
+      apps_to_process = select_apps_to_process(apps, project_apps, options)
+
+      # Collect known modules for filtering
+      known_modules = BeamReader.collect_modules_from_apps(apps_to_process)
+
+      # Extract calls and function locations from all BEAM files
+      {calls, function_locations, modules_processed} =
+        extract_from_apps(apps_to_process, known_modules)
+
+      # Generate and write output
+      output_path = resolve_output_path(options.output, project_path)
+
+      extraction_results = %{
+        calls: calls,
+        function_locations: function_locations,
+        project_path: project_path,
+        environment: options.env
+      }
+
+      json_string = Output.JSON.generate(extraction_results)
+      :ok = Output.JSON.write_file(json_string, output_path)
 
       result =
         RunResult.new(
           project_type: project_type,
           project_apps: project_apps,
+          project_path: project_path,
           build_dir: build_lib_path,
-          apps: apps
+          environment: options.env,
+          apps: apps,
+          calls: calls,
+          function_locations: function_locations,
+          modules_processed: modules_processed,
+          output_file: output_path
         )
 
-      # TODO: Continue with BEAM file processing in later tickets
       {:ok, result}
+    end
+  end
+
+  # Select which apps to process based on CLI options
+  defp select_apps_to_process(all_apps, project_apps, options) do
+    cond do
+      options.include_deps ->
+        # Include all apps
+        all_apps
+
+      options.deps != [] ->
+        # Include project apps + specified deps
+        project_apps_set = MapSet.new(project_apps)
+        deps_set = MapSet.new(options.deps)
+
+        Enum.filter(all_apps, fn {app_name, _path} ->
+          MapSet.member?(project_apps_set, app_name) or MapSet.member?(deps_set, app_name)
+        end)
+
+      true ->
+        # Only project apps
+        project_apps_set = MapSet.new(project_apps)
+
+        Enum.filter(all_apps, fn {app_name, _path} ->
+          MapSet.member?(project_apps_set, app_name)
+        end)
+    end
+  end
+
+  # Extract calls and function locations from all apps
+  defp extract_from_apps(apps, known_modules) do
+    apps
+    |> Enum.flat_map(fn {_app_name, ebin_path} ->
+      BuildDiscovery.find_beam_files(ebin_path)
+    end)
+    |> Enum.reduce({[], %{}, 0}, fn beam_path, {calls_acc, locations_acc, count} ->
+      case process_beam_file(beam_path, known_modules) do
+        {:ok, {new_calls, new_locations}} ->
+          merged_locations = Map.merge(locations_acc, new_locations)
+          {calls_acc ++ new_calls, merged_locations, count + 1}
+
+        {:error, _reason} ->
+          # Skip files that can't be processed
+          {calls_acc, locations_acc, count}
+      end
+    end)
+  end
+
+  # Process a single BEAM file to extract calls and function locations
+  defp process_beam_file(beam_path, known_modules) do
+    with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
+         {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do
+      source_file = debug_info[:file] || ""
+
+      # Extract function calls
+      calls =
+        debug_info.definitions
+        |> CallExtractor.extract_calls(module, source_file)
+        |> CallFilter.filter_calls(known_modules: known_modules)
+
+      # Extract function locations with module info
+      functions =
+        debug_info.definitions
+        |> FunctionExtractor.extract_functions(source_file)
+        |> add_module_to_locations(module)
+
+      {:ok, {calls, functions}}
+    end
+  end
+
+  # Add module name to each function location for grouping in output
+  defp add_module_to_locations(functions, module) do
+    module_string = module_to_string(module)
+
+    functions
+    |> Enum.into(%{}, fn {func_key, info} ->
+      {func_key, Map.put(info, :module, module_string)}
+    end)
+  end
+
+  defp module_to_string(module) when is_atom(module) do
+    module
+    |> Atom.to_string()
+    |> String.replace_leading("Elixir.", "")
+  end
+
+  # Resolve output path relative to project or as absolute
+  defp resolve_output_path(output, project_path) do
+    if Path.type(output) == :absolute do
+      output
+    else
+      Path.join(project_path, output)
     end
   end
 

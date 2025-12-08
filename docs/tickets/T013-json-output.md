@@ -10,18 +10,18 @@ Generate JSON output with calls and locations.
 
 ## Acceptance Criteria
 
-- [ ] Add `jason` dependency (~> 1.4) to mix.exs
-- [ ] Create `CodeIntelligenceTracer.Output.JSON` module
-- [ ] Implement `generate/1` (extraction_results)
+- [x] Add `jason` dependency (~> 1.4) to mix.exs
+- [x] Create `CodeIntelligenceTracer.Output.JSON` module
+- [x] Implement `generate/1` (extraction_results)
   - Returns JSON string
-- [ ] Include metadata section:
+- [x] Include metadata section:
   - `generated_at` - ISO8601 timestamp
   - `project_path` - analyzed project path
   - `environment` - build environment (dev/test/prod)
-- [ ] Include `calls` array with caller/callee structure
-- [ ] Include `function_locations` map organized by module
-- [ ] Use `Jason.encode!` with `pretty: true`
-- [ ] Implement `write_file/2` (json_string, output_path)
+- [x] Include `calls` array with caller/callee structure
+- [x] Include `function_locations` map organized by module
+- [x] Use `Jason.encode!` with `pretty: true`
+- [x] Implement `write_file/2` (json_string, output_path)
 
 ## Files to Create
 
