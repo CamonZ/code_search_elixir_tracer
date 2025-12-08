@@ -13,11 +13,13 @@ See: https://github.com/kentaro/toon_ex
 
 ## Acceptance Criteria
 
-- [ ] Add `toon` dependency (~> 0.1) to mix.exs
-- [ ] Create `CodeIntelligenceTracer.Output.TOON` module
-- [ ] Implement `generate/1` (extraction_results)
+- [x] Add `toon` dependency (~> 0.1) to mix.exs
+  - **Added toon ~> 0.3**
+- [x] Create `CodeIntelligenceTracer.Output.TOON` module
+  - **Created lib/code_intelligence_tracer/output/toon.ex**
+- [x] Implement `generate/1` (extraction_results)
   - Returns TOON string
-- [ ] Same structure as JSON output:
+- [x] Same structure as JSON output:
   - Metadata section
   - Extraction stats
   - Calls array
@@ -25,9 +27,12 @@ See: https://github.com/kentaro/toon_ex
   - Type signatures
   - Specs and types
   - Structs
-- [ ] Use `Toon.encode!/1`
-- [ ] Implement `write_file/2` (toon_string, output_path)
-- [ ] Update CLI to dispatch to correct output module based on `--format`
+  - **All fields included, same as JSON output**
+- [x] Use `Toon.encode!/1`
+  - **Uses Toon.encode/1 with pattern matching**
+- [x] Implement `write_file/2` (toon_string, output_path)
+- [x] Update CLI to dispatch to correct output module based on `--format`
+  - **CLI.write_output/3 dispatches by format**
 
 ## Files to Create
 

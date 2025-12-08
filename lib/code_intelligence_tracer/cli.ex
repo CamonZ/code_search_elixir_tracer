@@ -96,8 +96,7 @@ defmodule CodeIntelligenceTracer.CLI do
         stats: stats
       }
 
-      json_string = Output.JSON.generate(extraction_results)
-      :ok = Output.JSON.write_file(json_string, output_path)
+      :ok = write_output(extraction_results, output_path, options.format)
 
       result =
         RunResult.new(
@@ -239,6 +238,17 @@ defmodule CodeIntelligenceTracer.CLI do
     else
       Path.join(project_path, output)
     end
+  end
+
+  # Write output in the specified format
+  defp write_output(results, output_path, "json") do
+    json_string = Output.JSON.generate(results)
+    Output.JSON.write_file(json_string, output_path)
+  end
+
+  defp write_output(results, output_path, "toon") do
+    toon_string = Output.TOON.generate(results)
+    Output.TOON.write_file(toon_string, output_path)
   end
 
   @doc """
