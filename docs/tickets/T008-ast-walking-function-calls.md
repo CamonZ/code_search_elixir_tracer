@@ -10,16 +10,17 @@ Walk function AST to extract remote and local calls.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.CallExtractor` module
-- [ ] Implement `extract_calls/3` (definitions, module_name, source_file)
+- [x] Create `CodeIntelligenceTracer.CallExtractor` module
+- [x] Implement `extract_calls/3` (definitions, module_name, source_file)
   - Uses `Macro.prewalk` to traverse AST
-- [ ] Detect remote calls: `{{:., _, [module, func]}, _, args}`
+- [x] Detect remote calls: `{{:., _, [module, func]}, _, args}`
   - Handle `Module.function(args)` pattern
   - Handle `:erlang_module.function(args)` pattern
-- [ ] Detect local calls: `{func_atom, _, args}` where func_atom is atom
-- [ ] Capture caller info: module, function, arity, file, line
-- [ ] Capture callee info: module, function, arity
-- [ ] Return list of call records
+- [x] Detect local calls: `{func_atom, _, args}` where func_atom is atom
+- [x] Capture caller info: module, function, kind, file, line
+- [x] Capture callee info: module, function, arity
+- [x] Extract calls from all function types: def, defp, defmacro, defmacrop
+- [x] Return list of call records
 
 ## Files to Create
 
@@ -33,11 +34,12 @@ Walk function AST to extract remote and local calls.
   caller: %{
     module: "MyApp.Foo",
     function: "bar/2",
+    kind: :def | :defp | :defmacro | :defmacrop,
     file: "lib/my_app/foo.ex",
     line: 42
   },
   callee: %{
-    module: "MyApp.Baz",
+    module: "MyApp.Baz",  # same as caller module for local calls
     function: "qux",
     arity: 1
   }
