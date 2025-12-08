@@ -10,14 +10,20 @@ Complete documentation and help text.
 
 ## Acceptance Criteria
 
-- [ ] Comprehensive `--help` output covering all options
-- [ ] @moduledoc for all public modules
-- [ ] @doc for public functions
-- [ ] README with:
+- [x] Comprehensive `--help` output covering all options
+  - **CLI.print_help/0 covers all options with examples**
+- [x] @moduledoc for all public modules
+  - **All modules have @moduledoc**
+- [x] @doc for public functions
+  - **Public functions documented**
+- [x] README with:
   - Installation instructions
   - Usage examples
   - Output format documentation
   - Requirements (Elixir version, etc.)
+  - **Complete README.md rewritten**
+- [x] Output format documentation
+  - **docs/OUTPUT_FORMAT.md created with full JSON schema**
 
 ## Files to Modify
 
