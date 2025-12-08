@@ -8,6 +8,10 @@
 
 Profile and optimize performance for large codebases.
 
+## Status: SKIPPED
+
+Performance is adequate for current use cases. Profiling deferred until needed.
+
 ## Acceptance Criteria
 
 - [ ] Profile extraction on large codebase (1000+ modules)
