@@ -10,10 +10,10 @@ Parse spec clauses into structured type data.
 
 ## Acceptance Criteria
 
-- [ ] Implement `parse_spec_clause/1` in SpecExtractor
+- [x] Implement `parse_spec_clause/1` in SpecExtractor
   - Handle `{:type, _, :fun, [{:type, _, :product, inputs}, return]}`
   - Handle bounded_fun (specs with when clauses)
-- [ ] Implement `parse_type_ast/1` for structured output:
+- [x] Implement `parse_type_ast/1` for structured output:
   - Union types: `%{type: :union, types: [...]}`
   - Tuple types: `%{type: :tuple, elements: [...]}`
   - List types: `%{type: :list, element_type: ...}`

@@ -196,4 +196,314 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert record_success_spec.kind == :spec
     end
   end
+
+  # =============================================================================
+  # T019: parse_spec_clause/1 and parse_type_ast/1 tests
+  # =============================================================================
+
+  describe "parse_spec_clause/1" do
+    test "parses simple spec clause" do
+      # @spec foo(integer) :: atom
+      clause =
+        {:type, {10, 9}, :fun,
+         [
+           {:type, {10, 9}, :product, [{:type, {10, 18}, :integer, []}]},
+           {:type, {10, 30}, :atom, []}
+         ]}
+
+      result = SpecExtractor.parse_spec_clause(clause)
+
+      assert result.inputs == [%{type: :builtin, name: :integer}]
+      assert result.return == %{type: :builtin, name: :atom}
+    end
+
+    test "parses spec with multiple inputs" do
+      # @spec foo(integer, binary) :: atom
+      clause =
+        {:type, {10, 9}, :fun,
+         [
+           {:type, {10, 9}, :product,
+            [
+              {:type, {10, 18}, :integer, []},
+              {:type, {10, 30}, :binary, []}
+            ]},
+           {:type, {10, 44}, :atom, []}
+         ]}
+
+      result = SpecExtractor.parse_spec_clause(clause)
+
+      assert result.inputs == [
+               %{type: :builtin, name: :integer},
+               %{type: :builtin, name: :binary}
+             ]
+
+      assert result.return == %{type: :builtin, name: :atom}
+    end
+
+    test "parses spec with no inputs" do
+      # @spec foo() :: atom
+      clause =
+        {:type, {10, 9}, :fun,
+         [
+           {:type, {10, 9}, :product, []},
+           {:type, {10, 18}, :atom, []}
+         ]}
+
+      result = SpecExtractor.parse_spec_clause(clause)
+
+      assert result.inputs == []
+      assert result.return == %{type: :builtin, name: :atom}
+    end
+
+    test "handles bounded_fun (when clauses)" do
+      # @spec foo(a) :: a when a: integer
+      clause =
+        {:type, {10, 9}, :bounded_fun,
+         [
+           {:type, {10, 9}, :fun,
+            [
+              {:type, {10, 9}, :product, [{:var, {10, 14}, :a}]},
+              {:var, {10, 20}, :a}
+            ]},
+           [{:type, {10, 27}, :constraint,
+             [{:atom, {10, 27}, :is_subtype}, [{:var, {10, 27}, :a}, {:type, {10, 30}, :integer, []}]]}]
+         ]}
+
+      result = SpecExtractor.parse_spec_clause(clause)
+
+      assert result.inputs == [%{type: :var, name: :a}]
+      assert result.return == %{type: :var, name: :a}
+    end
+  end
+
+  describe "parse_type_ast/1" do
+    test "parses builtin types" do
+      assert SpecExtractor.parse_type_ast({:type, {1, 1}, :integer, []}) ==
+               %{type: :builtin, name: :integer}
+
+      assert SpecExtractor.parse_type_ast({:type, {1, 1}, :binary, []}) ==
+               %{type: :builtin, name: :binary}
+
+      assert SpecExtractor.parse_type_ast({:type, {1, 1}, :atom, []}) ==
+               %{type: :builtin, name: :atom}
+
+      assert SpecExtractor.parse_type_ast({:type, {1, 1}, :term, []}) ==
+               %{type: :builtin, name: :term}
+
+      assert SpecExtractor.parse_type_ast({:type, {1, 1}, :any, []}) ==
+               %{type: :builtin, name: :any}
+    end
+
+    test "parses union types" do
+      # integer | atom
+      union_ast =
+        {:type, {1, 1}, :union,
+         [
+           {:type, {1, 1}, :integer, []},
+           {:type, {1, 10}, :atom, []}
+         ]}
+
+      result = SpecExtractor.parse_type_ast(union_ast)
+
+      assert result == %{
+               type: :union,
+               types: [
+                 %{type: :builtin, name: :integer},
+                 %{type: :builtin, name: :atom}
+               ]
+             }
+    end
+
+    test "parses tuple types" do
+      # {atom, integer}
+      tuple_ast =
+        {:type, {1, 1}, :tuple,
+         [
+           {:type, {1, 2}, :atom, []},
+           {:type, {1, 8}, :integer, []}
+         ]}
+
+      result = SpecExtractor.parse_type_ast(tuple_ast)
+
+      assert result == %{
+               type: :tuple,
+               elements: [
+                 %{type: :builtin, name: :atom},
+                 %{type: :builtin, name: :integer}
+               ]
+             }
+    end
+
+    test "parses any tuple" do
+      result = SpecExtractor.parse_type_ast({:type, {1, 1}, :tuple, :any})
+      assert result == %{type: :tuple, elements: :any}
+    end
+
+    test "parses list types" do
+      # [integer]
+      list_ast = {:type, {1, 1}, :list, [{:type, {1, 2}, :integer, []}]}
+
+      result = SpecExtractor.parse_type_ast(list_ast)
+
+      assert result == %{
+               type: :list,
+               element_type: %{type: :builtin, name: :integer}
+             }
+    end
+
+    test "parses empty list type" do
+      result = SpecExtractor.parse_type_ast({:type, {1, 1}, :list, []})
+      assert result == %{type: :list, element_type: nil}
+    end
+
+    test "parses map types with fields" do
+      # %{key: value}
+      map_ast =
+        {:type, {1, 1}, :map,
+         [
+           {:type, {1, 3}, :map_field_exact,
+            [
+              {:atom, {1, 3}, :key},
+              {:type, {1, 9}, :integer, []}
+            ]}
+         ]}
+
+      result = SpecExtractor.parse_type_ast(map_ast)
+
+      assert result == %{
+               type: :map,
+               fields: [
+                 %{
+                   kind: :exact,
+                   key: %{type: :literal, kind: :atom, value: :key},
+                   value: %{type: :builtin, name: :integer}
+                 }
+               ]
+             }
+    end
+
+    test "parses any map" do
+      result = SpecExtractor.parse_type_ast({:type, {1, 1}, :map, :any})
+      assert result == %{type: :map, fields: :any}
+    end
+
+    test "parses remote type references" do
+      # String.t()
+      remote_ast =
+        {:remote_type, {1, 1},
+         [
+           {:atom, 0, String},
+           {:atom, 0, :t},
+           []
+         ]}
+
+      result = SpecExtractor.parse_type_ast(remote_ast)
+
+      assert result == %{
+               type: :type_ref,
+               module: "String",
+               name: :t,
+               args: []
+             }
+    end
+
+    test "parses local type references" do
+      # t()
+      user_type_ast = {:user_type, {1, 1}, :t, []}
+
+      result = SpecExtractor.parse_type_ast(user_type_ast)
+
+      assert result == %{
+               type: :type_ref,
+               module: nil,
+               name: :t,
+               args: []
+             }
+    end
+
+    test "parses atom literals" do
+      result = SpecExtractor.parse_type_ast({:atom, {1, 1}, :ok})
+      assert result == %{type: :literal, kind: :atom, value: :ok}
+    end
+
+    test "parses integer literals" do
+      result = SpecExtractor.parse_type_ast({:integer, {1, 1}, 42})
+      assert result == %{type: :literal, kind: :integer, value: 42}
+    end
+
+    test "parses type variables" do
+      result = SpecExtractor.parse_type_ast({:var, {1, 1}, :a})
+      assert result == %{type: :var, name: :a}
+    end
+
+    test "parses function types" do
+      # (integer -> atom)
+      fun_ast =
+        {:type, {1, 1}, :fun,
+         [
+           {:type, {1, 2}, :product, [{:type, {1, 3}, :integer, []}]},
+           {:type, {1, 15}, :atom, []}
+         ]}
+
+      result = SpecExtractor.parse_type_ast(fun_ast)
+
+      assert result == %{
+               type: :fun,
+               inputs: [%{type: :builtin, name: :integer}],
+               return: %{type: :builtin, name: :atom}
+             }
+    end
+
+    test "parses annotated types" do
+      # name :: integer
+      ann_ast =
+        {:ann_type, {1, 1},
+         [
+           {:var, {1, 1}, :name},
+           {:type, {1, 10}, :integer, []}
+         ]}
+
+      result = SpecExtractor.parse_type_ast(ann_ast)
+
+      # Annotated types strip the name and return the underlying type
+      assert result == %{type: :builtin, name: :integer}
+    end
+
+    test "parses builtin types with args" do
+      # nonempty_list(integer)
+      ast = {:type, {1, 1}, :nonempty_list, [{:type, {1, 15}, :integer, []}]}
+
+      result = SpecExtractor.parse_type_ast(ast)
+
+      assert result == %{
+               type: :builtin,
+               name: :nonempty_list,
+               args: [%{type: :builtin, name: :integer}]
+             }
+    end
+  end
+
+  describe "parse_spec_clause/1 with real BEAM data" do
+    test "parses clauses from Stats module" do
+      beam_path =
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+
+      {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
+      specs = SpecExtractor.extract_specs(chunks)
+
+      # Parse record_success/3 spec
+      record_success_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 3))
+      [clause] = record_success_spec.clauses
+      parsed = SpecExtractor.parse_spec_clause(clause)
+
+      # Should have 3 inputs: t(), non_neg_integer(), non_neg_integer()
+      assert length(parsed.inputs) == 3
+
+      # First input should be t() (local type ref)
+      assert %{type: :type_ref, module: nil, name: :t} = hd(parsed.inputs)
+
+      # Return should be t()
+      assert %{type: :type_ref, module: nil, name: :t} = parsed.return
+    end
+  end
 end
