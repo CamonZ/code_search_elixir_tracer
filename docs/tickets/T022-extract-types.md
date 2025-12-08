@@ -10,15 +10,15 @@ Parse @type and @opaque definitions from abstract_code.
 
 ## Acceptance Criteria
 
-- [ ] Implement `extract_types/1` (chunks) in SpecExtractor
+- [x] Implement `extract_types/1` (chunks) in SpecExtractor
   - Filter for `{:attribute, _, :type, _}` forms
   - Filter for `{:attribute, _, :opaque, _}` forms
-- [ ] Extract for each type:
+- [x] Extract for each type:
   - Type name
   - Kind: `:type` or `:opaque`
   - Type parameters (for parameterized types)
   - Full definition string
-- [ ] Use `:erl_pp.form/1` to format, then convert to Elixir syntax
+- [x] Use existing `parse_type_ast/1` and `format_type_string/1` for formatting
 
 ## Files to Modify
 
