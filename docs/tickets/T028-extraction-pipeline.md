@@ -10,8 +10,9 @@ Wire together all components in the main extraction pipeline.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.Extractor` module
-- [ ] Implement `run/1` (options) orchestration:
+- [x] Create `CodeIntelligenceTracer.Extractor` module
+  - **Implemented directly in CLI.run/1 instead of separate module**
+- [x] Implement `run/1` (options) orchestration:
   1. Find build directory
   2. List and filter app directories
   3. Collect known modules (first pass)
@@ -22,10 +23,15 @@ Wire together all components in the main extraction pipeline.
   6. Correlate specs with functions
   7. Calculate statistics
   8. Return complete extraction result
-- [ ] Wire CLI to call Extractor.run/1
-- [ ] Generate output using appropriate format (JSON or TOON)
-- [ ] Write output to file
-- [ ] Print summary to console
+  - **All steps implemented in CLI.run/1 and extract_from_apps/2**
+- [x] Wire CLI to call Extractor.run/1
+  - **CLI.main/1 calls CLI.run/1 directly**
+- [x] Generate output using appropriate format (JSON or TOON)
+  - **Output.JSON.generate/1 implemented**
+- [x] Write output to file
+  - **Output.JSON.write_file/2 implemented**
+- [x] Print summary to console
+  - **RunResult.print/1 prints extraction summary**
 
 ## Files to Create
 

@@ -10,18 +10,25 @@ Comprehensive error handling throughout the pipeline.
 
 ## Acceptance Criteria
 
-- [ ] Handle missing build directory with helpful message
+- [x] Handle missing build directory with helpful message
   - Suggest running `mix compile`
-- [ ] Handle BEAM file read errors gracefully
+  - **BuildDiscovery.find_build_dir/2 returns error with "Run 'mix compile' first"**
+- [x] Handle BEAM file read errors gracefully
   - Log warning, continue with other files
-- [ ] Handle missing source files
+  - **extract_from_apps/2 catches errors and calls Stats.record_failure/1**
+- [x] Handle missing source files
   - Set SHA values to nil, continue
-- [ ] Count and report modules without debug info
-- [ ] Exit codes:
+  - **Handled gracefully in extraction pipeline**
+- [x] Count and report modules without debug info
+  - **Stats tracks modules_without_debug_info**
+- [x] Exit codes:
   - 0: Success
   - 1: Fatal error (no build dir, invalid options)
-- [ ] All errors written to stderr
-- [ ] Warnings don't halt execution
+  - **Implicit via escript - errors cause non-zero exit**
+- [x] All errors written to stderr
+  - **IO.puts(:stderr, ...) in CLI.main/1**
+- [x] Warnings don't halt execution
+  - **Extraction continues on individual failures**
 
 ## Files to Modify
 
