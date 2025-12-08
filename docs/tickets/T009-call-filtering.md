@@ -10,22 +10,20 @@ Filter out stdlib and Erlang modules from call graph.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.CallFilter` module
-- [ ] Define `@stdlib_modules` list:
+- [x] Create `CodeIntelligenceTracer.CallFilter` module
+- [x] Define `@stdlib_modules` MapSet:
   - Enum, Map, List, Keyword, String, Integer, Float
   - Tuple, MapSet, Range, Stream, File, IO, Path
   - Regex, URI, Base, Date, DateTime, Time, NaiveDateTime
   - Access, Agent, Application, Task, GenServer, Supervisor
   - Process, Node, Port, System, Code, Macro, Module
   - Kernel, Protocol, Exception, Logger, etc.
-- [ ] Define `@special_forms` list:
-  - `__block__`, `__aliases__`, `case`, `cond`, `for`, `fn`, `if`
-  - `quote`, `receive`, `require`, `try`, `unless`, `with`, etc.
-- [ ] Implement `should_include?/2` (callee_module, known_modules)
-  - Filter out Erlang modules (starts with ":")
+- [x] Special forms handled in CallExtractor (not duplicated here)
+- [x] Implement `should_include?/1` and `should_include?/2`
+  - Filter out Erlang modules (lowercase, no dots)
   - Filter out stdlib modules
-  - Filter out special forms
   - Optionally filter to only known_modules
+- [x] Implement `filter_calls/2` for batch filtering
 
 ## Files to Create
 
