@@ -10,13 +10,13 @@ Create BeamReader module to read raw chunks from BEAM files using `:beam_lib`.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.BeamReader` module
-- [ ] Implement `read_chunks/1` (beam_path)
+- [x] Create `CodeIntelligenceTracer.BeamReader` module
+- [x] Implement `read_chunks/1` (beam_path)
   - Uses `:beam_lib.chunks/2` to read chunks
   - Requests: `[:debug_info, :attributes, :abstract_code]`
   - Returns `{:ok, {module, chunks}}` or `{:error, reason}`
-- [ ] Handle missing chunks gracefully (abstract_code may not exist)
-- [ ] Handle missing/corrupt BEAM files
+- [x] Handle missing chunks gracefully (abstract_code may not exist)
+- [x] Handle missing/corrupt BEAM files
 
 ## Files to Create
 
