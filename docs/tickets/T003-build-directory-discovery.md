@@ -10,12 +10,14 @@ Locate compiled applications in `_build/{env}/lib`.
 
 ## Acceptance Criteria
 
-- [ ] Create `CodeIntelligenceTracer.BuildDiscovery` module
-- [ ] Implement `find_build_dir/2` (project_path, env)
+- [x] Create `CodeIntelligenceTracer.BuildDiscovery` module
+- [x] Implement `find_build_dir/2` (project_path, env)
   - Returns `{:ok, path}` or `{:error, reason}`
-- [ ] Implement `list_app_directories/1` (build_lib_path)
+- [x] Implement `list_app_directories/1` (build_lib_path)
   - Returns list of `{app_name, ebin_path}` tuples
-- [ ] Handle missing build directory with clear error message
+- [x] Handle missing build directory with clear error message
+- [x] Implement `detect_project_type/1` for umbrella vs regular projects
+- [x] Implement `find_project_apps/1` to identify main app(s) vs dependencies
 
 ## Files to Create
 
