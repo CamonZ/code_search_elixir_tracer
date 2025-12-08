@@ -274,4 +274,224 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
     |> Atom.to_string()
     |> String.replace_leading("Elixir.", "")
   end
+
+  # =============================================================================
+  # Type String Formatting (T020)
+  # =============================================================================
+
+  @type formatted_clause :: %{
+          inputs: [type_ast()],
+          return: type_ast(),
+          inputs_string: [String.t()],
+          return_string: String.t(),
+          full: String.t()
+        }
+
+  @doc """
+  Format a parsed spec into human-readable strings.
+
+  Takes a spec record (from extract_specs/1) and returns a formatted version
+  with string representations of types.
+
+  ## Examples
+
+      iex> spec = %{name: :foo, arity: 1, clauses: [...], kind: :spec, line: 10}
+      iex> format_spec(spec)
+      %{
+        name: :foo,
+        arity: 1,
+        kind: :spec,
+        line: 10,
+        clauses: [
+          %{
+            inputs: [...],
+            return: ...,
+            inputs_string: ["integer()"],
+            return_string: "atom()",
+            full: "@spec foo(integer()) :: atom()"
+          }
+        ]
+      }
+
+  """
+  @spec format_spec(spec_record()) :: map()
+  def format_spec(%{name: name, arity: arity, kind: kind, line: line, clauses: clauses}) do
+    formatted_clauses =
+      Enum.map(clauses, fn clause ->
+        format_clause(clause, name, kind)
+      end)
+
+    %{
+      name: name,
+      arity: arity,
+      kind: kind,
+      line: line,
+      clauses: formatted_clauses
+    }
+  end
+
+  @doc """
+  Format a single spec clause into human-readable strings.
+
+  ## Parameters
+
+    - `clause` - Raw clause from abstract format
+    - `name` - Function name
+    - `kind` - :spec or :callback
+
+  """
+  @spec format_clause(tuple(), atom(), :spec | :callback) :: formatted_clause()
+  def format_clause(clause, name, kind) do
+    parsed = parse_spec_clause(clause)
+    inputs_string = Enum.map(parsed.inputs, &format_type_string/1)
+    return_string = format_type_string(parsed.return)
+
+    prefix = if kind == :callback, do: "@callback", else: "@spec"
+    inputs_joined = Enum.join(inputs_string, ", ")
+    full = "#{prefix} #{name}(#{inputs_joined}) :: #{return_string}"
+
+    %{
+      inputs: parsed.inputs,
+      return: parsed.return,
+      inputs_string: inputs_string,
+      return_string: return_string,
+      full: full
+    }
+  end
+
+  @doc """
+  Format a type AST into a human-readable Elixir type string.
+
+  Converts the structured type map back into Elixir type syntax.
+
+  ## Examples
+
+      iex> format_type_string(%{type: :builtin, name: :integer})
+      "integer()"
+
+      iex> format_type_string(%{type: :type_ref, module: "String", name: :t, args: []})
+      "String.t()"
+
+  """
+  @spec format_type_string(type_ast()) :: String.t()
+  def format_type_string(%{type: :builtin, name: name, args: args}) do
+    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    "#{name}(#{args_str})"
+  end
+
+  def format_type_string(%{type: :builtin, name: name}) do
+    "#{name}()"
+  end
+
+  def format_type_string(%{type: :literal, kind: :atom, value: value}) do
+    inspect(value)
+  end
+
+  def format_type_string(%{type: :literal, kind: :integer, value: value}) do
+    Integer.to_string(value)
+  end
+
+  def format_type_string(%{type: :literal, kind: :list, value: []}) do
+    "[]"
+  end
+
+  def format_type_string(%{type: :type_ref, module: nil, name: name, args: []}) do
+    "#{name}()"
+  end
+
+  def format_type_string(%{type: :type_ref, module: nil, name: name, args: args}) do
+    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    "#{name}(#{args_str})"
+  end
+
+  def format_type_string(%{type: :type_ref, module: module, name: name, args: []}) do
+    "#{module}.#{name}()"
+  end
+
+  def format_type_string(%{type: :type_ref, module: module, name: name, args: args}) do
+    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    "#{module}.#{name}(#{args_str})"
+  end
+
+  def format_type_string(%{type: :union, types: types}) do
+    types
+    |> Enum.map(&format_type_string/1)
+    |> Enum.join(" | ")
+  end
+
+  def format_type_string(%{type: :tuple, elements: :any}) do
+    "tuple()"
+  end
+
+  def format_type_string(%{type: :tuple, elements: elements}) do
+    elements_str = Enum.map_join(elements, ", ", &format_type_string/1)
+    "{#{elements_str}}"
+  end
+
+  def format_type_string(%{type: :list, element_type: nil}) do
+    "list()"
+  end
+
+  def format_type_string(%{type: :list, element_type: element_type}) do
+    "[#{format_type_string(element_type)}]"
+  end
+
+  def format_type_string(%{type: :map, fields: :any}) do
+    "map()"
+  end
+
+  def format_type_string(%{type: :map, fields: fields}) do
+    fields_str =
+      fields
+      |> Enum.map(&format_map_field/1)
+      |> Enum.join(", ")
+
+    "%{#{fields_str}}"
+  end
+
+  def format_type_string(%{type: :fun, inputs: :any, return: _return}) do
+    "fun()"
+  end
+
+  def format_type_string(%{type: :fun, inputs: inputs, return: return}) do
+    inputs_str = Enum.map_join(inputs, ", ", &format_type_string/1)
+    return_str = format_type_string(return)
+    "(#{inputs_str} -> #{return_str})"
+  end
+
+  def format_type_string(%{type: :var, name: name}) do
+    Atom.to_string(name)
+  end
+
+  def format_type_string(%{type: :any}) do
+    "any()"
+  end
+
+  def format_type_string(_) do
+    "term()"
+  end
+
+  defp format_map_field(%{kind: :exact, key: key, value: value}) do
+    key_str = format_type_string(key)
+    value_str = format_type_string(value)
+
+    # Use atom shorthand for atom keys
+    case key do
+      %{type: :literal, kind: :atom, value: atom_key} ->
+        "#{atom_key}: #{value_str}"
+
+      _ ->
+        "#{key_str} => #{value_str}"
+    end
+  end
+
+  defp format_map_field(%{kind: :assoc, key: key, value: value}) do
+    key_str = format_type_string(key)
+    value_str = format_type_string(value)
+    "optional(#{key_str}) => #{value_str}"
+  end
+
+  defp format_map_field(_) do
+    "term() => term()"
+  end
 end

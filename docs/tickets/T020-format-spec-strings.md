@@ -10,13 +10,13 @@ Generate human-readable spec strings.
 
 ## Acceptance Criteria
 
-- [ ] Implement `format_type_string/1` (type_ast) in SpecExtractor
+- [x] Implement `format_type_string/1` (type_ast) in SpecExtractor
   - Convert Erlang abstract format to Elixir syntax
-- [ ] Generate for each clause:
+- [x] Generate for each clause:
   - `inputs_string` - array of formatted input types
   - `return_string` - formatted return type
   - `full` - complete spec string like `@spec foo(integer()) :: String.t()`
-- [ ] Implement `erlang_to_elixir_type/1` conversions:
+- [x] Implement `erlang_to_elixir_type/1` conversions:
   - `'Elixir.String':t()` -> `String.t()`
   - `:erlang` module refs -> appropriate Elixir names
 

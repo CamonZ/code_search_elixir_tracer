@@ -506,4 +506,224 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert %{type: :type_ref, module: nil, name: :t} = parsed.return
     end
   end
+
+  # =============================================================================
+  # T020: format_type_string/1 tests
+  # =============================================================================
+
+  describe "format_type_string/1" do
+    test "formats builtin types" do
+      assert SpecExtractor.format_type_string(%{type: :builtin, name: :integer}) == "integer()"
+      assert SpecExtractor.format_type_string(%{type: :builtin, name: :binary}) == "binary()"
+      assert SpecExtractor.format_type_string(%{type: :builtin, name: :atom}) == "atom()"
+      assert SpecExtractor.format_type_string(%{type: :builtin, name: :term}) == "term()"
+    end
+
+    test "formats builtin types with args" do
+      ast = %{type: :builtin, name: :nonempty_list, args: [%{type: :builtin, name: :integer}]}
+      assert SpecExtractor.format_type_string(ast) == "nonempty_list(integer())"
+    end
+
+    test "formats atom literals" do
+      assert SpecExtractor.format_type_string(%{type: :literal, kind: :atom, value: :ok}) == ":ok"
+
+      assert SpecExtractor.format_type_string(%{type: :literal, kind: :atom, value: :error}) ==
+               ":error"
+    end
+
+    test "formats integer literals" do
+      assert SpecExtractor.format_type_string(%{type: :literal, kind: :integer, value: 42}) == "42"
+    end
+
+    test "formats local type refs" do
+      assert SpecExtractor.format_type_string(%{type: :type_ref, module: nil, name: :t, args: []}) ==
+               "t()"
+
+      ast = %{
+        type: :type_ref,
+        module: nil,
+        name: :option,
+        args: [%{type: :builtin, name: :integer}]
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "option(integer())"
+    end
+
+    test "formats remote type refs" do
+      assert SpecExtractor.format_type_string(%{
+               type: :type_ref,
+               module: "String",
+               name: :t,
+               args: []
+             }) == "String.t()"
+
+      ast = %{
+        type: :type_ref,
+        module: "GenServer",
+        name: :on_start,
+        args: []
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "GenServer.on_start()"
+    end
+
+    test "formats union types" do
+      ast = %{
+        type: :union,
+        types: [
+          %{type: :builtin, name: :integer},
+          %{type: :builtin, name: :atom}
+        ]
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "integer() | atom()"
+    end
+
+    test "formats tuple types" do
+      ast = %{
+        type: :tuple,
+        elements: [
+          %{type: :literal, kind: :atom, value: :ok},
+          %{type: :builtin, name: :integer}
+        ]
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "{:ok, integer()}"
+    end
+
+    test "formats any tuple" do
+      assert SpecExtractor.format_type_string(%{type: :tuple, elements: :any}) == "tuple()"
+    end
+
+    test "formats list types" do
+      ast = %{type: :list, element_type: %{type: :builtin, name: :integer}}
+      assert SpecExtractor.format_type_string(ast) == "[integer()]"
+    end
+
+    test "formats empty list type" do
+      assert SpecExtractor.format_type_string(%{type: :list, element_type: nil}) == "list()"
+    end
+
+    test "formats map types" do
+      ast = %{
+        type: :map,
+        fields: [
+          %{
+            kind: :exact,
+            key: %{type: :literal, kind: :atom, value: :name},
+            value: %{type: :type_ref, module: "String", name: :t, args: []}
+          }
+        ]
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "%{name: String.t()}"
+    end
+
+    test "formats any map" do
+      assert SpecExtractor.format_type_string(%{type: :map, fields: :any}) == "map()"
+    end
+
+    test "formats function types" do
+      ast = %{
+        type: :fun,
+        inputs: [%{type: :builtin, name: :integer}],
+        return: %{type: :builtin, name: :atom}
+      }
+
+      assert SpecExtractor.format_type_string(ast) == "(integer() -> atom())"
+    end
+
+    test "formats type variables" do
+      assert SpecExtractor.format_type_string(%{type: :var, name: :a}) == "a"
+      assert SpecExtractor.format_type_string(%{type: :var, name: :T}) == "T"
+    end
+
+    test "formats any type" do
+      assert SpecExtractor.format_type_string(%{type: :any}) == "any()"
+    end
+  end
+
+  describe "format_spec/1" do
+    test "formats a complete spec" do
+      spec = %{
+        name: :foo,
+        arity: 1,
+        kind: :spec,
+        line: 10,
+        clauses: [
+          {:type, {10, 9}, :fun,
+           [
+             {:type, {10, 9}, :product, [{:type, {10, 18}, :integer, []}]},
+             {:type, {10, 30}, :atom, []}
+           ]}
+        ]
+      }
+
+      result = SpecExtractor.format_spec(spec)
+
+      assert result.name == :foo
+      assert result.arity == 1
+      assert result.kind == :spec
+      assert result.line == 10
+      assert length(result.clauses) == 1
+
+      [clause] = result.clauses
+      assert clause.inputs_string == ["integer()"]
+      assert clause.return_string == "atom()"
+      assert clause.full == "@spec foo(integer()) :: atom()"
+    end
+
+    test "formats a callback" do
+      spec = %{
+        name: :handle_call,
+        arity: 2,
+        kind: :callback,
+        line: 5,
+        clauses: [
+          {:type, {5, 9}, :fun,
+           [
+             {:type, {5, 9}, :product,
+              [
+                {:type, {5, 20}, :term, []},
+                {:type, {5, 27}, :term, []}
+              ]},
+             {:type, {5, 34}, :term, []}
+           ]}
+        ]
+      }
+
+      result = SpecExtractor.format_spec(spec)
+
+      [clause] = result.clauses
+      assert clause.full == "@callback handle_call(term(), term()) :: term()"
+    end
+  end
+
+  describe "format_spec/1 with real BEAM data" do
+    test "formats specs from Stats module" do
+      beam_path =
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+
+      {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
+      specs = SpecExtractor.extract_specs(chunks)
+
+      # Format new/0 spec
+      new_spec = Enum.find(specs, &(&1.name == :new and &1.arity == 0))
+      formatted = SpecExtractor.format_spec(new_spec)
+
+      [clause] = formatted.clauses
+      assert clause.inputs_string == []
+      assert clause.return_string == "t()"
+      assert clause.full == "@spec new() :: t()"
+
+      # Format record_success/3 spec
+      record_spec = Enum.find(specs, &(&1.name == :record_success and &1.arity == 3))
+      formatted = SpecExtractor.format_spec(record_spec)
+
+      [clause] = formatted.clauses
+      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()"]
+      assert clause.return_string == "t()"
+      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer()) :: t()"
+    end
+  end
 end
