@@ -10,14 +10,16 @@ Parse mix.exs to determine main app name.
 
 ## Acceptance Criteria
 
-- [ ] Implement `detect_main_app/1` (project_path) in BuildDiscovery
+- [x] Implement `detect_main_app/1` (project_path) in BuildDiscovery
   - Read mix.exs file
   - Use regex to find `app: :app_name` in project/0 function
   - Return app name as string or `nil` if not found
-- [ ] Handle various formatting styles:
+  - **Implemented as `parse_app_name/1` and `find_project_apps/1`**
+- [x] Handle various formatting styles:
   - `app: :my_app`
   - `app:  :my_app` (extra space)
   - Multi-line project definitions
+  - **Handled via `~r/app:\s*:(\w+)/` regex**
 
 ## Files to Modify
 
