@@ -162,6 +162,212 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
     end
   end
 
+  describe "compute_source_sha/3" do
+    test "same source produces same SHA" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+      {_name, func_info} = Enum.at(functions, 0)
+
+      sha1 = FunctionExtractor.compute_source_sha(
+        func_info.source_file_absolute,
+        func_info.start_line,
+        func_info.end_line
+      )
+
+      sha2 = FunctionExtractor.compute_source_sha(
+        func_info.source_file_absolute,
+        func_info.start_line,
+        func_info.end_line
+      )
+
+      assert sha1 == sha2
+      assert is_binary(sha1)
+      assert String.length(sha1) == 64  # SHA256 hex is 64 chars
+    end
+
+    test "different line ranges produce different SHAs" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Get two different functions
+      [{_name1, func1}, {_name2, func2} | _] = Enum.to_list(functions)
+
+      sha1 = FunctionExtractor.compute_source_sha(
+        func1.source_file_absolute,
+        func1.start_line,
+        func1.end_line
+      )
+
+      sha2 = FunctionExtractor.compute_source_sha(
+        func2.source_file_absolute,
+        func2.start_line,
+        func2.end_line
+      )
+
+      # Different functions should (almost certainly) have different SHAs
+      assert sha1 != sha2
+    end
+
+    test "returns nil for missing source file" do
+      sha = FunctionExtractor.compute_source_sha("/nonexistent/file.ex", 1, 10)
+      assert sha == nil
+    end
+
+    test "returns valid hex string" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+      {_name, func_info} = Enum.at(functions, 0)
+
+      sha = FunctionExtractor.compute_source_sha(
+        func_info.source_file_absolute,
+        func_info.start_line,
+        func_info.end_line
+      )
+
+      # Should be valid lowercase hex
+      assert sha =~ ~r/^[a-f0-9]{64}$/
+    end
+  end
+
+  describe "compute_ast_sha/1" do
+    test "same clauses produce same SHA" do
+      clauses = [
+        {[line: 1], [{:x, [line: 1], nil}], [], {:x, [line: 1], nil}}
+      ]
+
+      sha1 = FunctionExtractor.compute_ast_sha(clauses)
+      sha2 = FunctionExtractor.compute_ast_sha(clauses)
+
+      assert sha1 == sha2
+      assert is_binary(sha1)
+      assert String.length(sha1) == 64
+    end
+
+    test "different line numbers produce same SHA (normalized)" do
+      # The clause tuple is {meta, args, guards, body}
+      # Only the body contains AST nodes with line metadata
+      clauses1 = [
+        {[line: 1], [{:x, [], nil}], [], {:+, [line: 1], [{:x, [], nil}, 1]}}
+      ]
+
+      clauses2 = [
+        {[line: 100], [{:x, [], nil}], [], {:+, [line: 100], [{:x, [], nil}, 1]}}
+      ]
+
+      sha1 = FunctionExtractor.compute_ast_sha(clauses1)
+      sha2 = FunctionExtractor.compute_ast_sha(clauses2)
+
+      # Same logic at different lines should have same AST SHA
+      assert sha1 == sha2
+    end
+
+    test "different logic produces different SHA" do
+      clauses1 = [
+        {[line: 1], [{:x, [line: 1], nil}], [], {:x, [line: 1], nil}}
+      ]
+
+      clauses2 = [
+        {[line: 1], [{:y, [line: 1], nil}], [], {:y, [line: 1], nil}}
+      ]
+
+      sha1 = FunctionExtractor.compute_ast_sha(clauses1)
+      sha2 = FunctionExtractor.compute_ast_sha(clauses2)
+
+      # Different variable names should produce different SHA
+      assert sha1 != sha2
+    end
+
+    test "returns valid hex string" do
+      clauses = [
+        {[line: 1], [], [], :ok}
+      ]
+
+      sha = FunctionExtractor.compute_ast_sha(clauses)
+      assert sha =~ ~r/^[a-f0-9]{64}$/
+    end
+  end
+
+  describe "normalize_ast/1" do
+    test "strips line metadata" do
+      ast = {:foo, [line: 10, column: 5], [:arg]}
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == {:foo, [], [:arg]}
+    end
+
+    test "strips column metadata" do
+      ast = {:bar, [column: 15], [{:x, [column: 20], nil}]}
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == {:bar, [], [{:x, [], nil}]}
+    end
+
+    test "strips counter metadata" do
+      ast = {:baz, [counter: 42], []}
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == {:baz, [], []}
+    end
+
+    test "preserves non-position metadata" do
+      ast = {:foo, [import: SomeModule, context: Elixir], [:arg]}
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == {:foo, [import: SomeModule, context: Elixir], [:arg]}
+    end
+
+    test "normalizes nested structures" do
+      ast = {
+        :def,
+        [line: 1],
+        [
+          {:foo, [line: 1], nil},
+          [do: {:bar, [line: 2], [{:x, [line: 2], nil}]}]
+        ]
+      }
+
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      # The do: keyword pair remains but the AST nodes inside are normalized
+      expected = {
+        :def,
+        [],
+        [
+          {:foo, [], nil},
+          [do: {:bar, [], [{:x, [], nil}]}]
+        ]
+      }
+
+      assert normalized == expected
+    end
+
+    test "handles tuples" do
+      ast = {{:a, [line: 1], nil}, {:b, [line: 2], nil}}
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == {{:a, [], nil}, {:b, [], nil}}
+    end
+
+    test "handles lists" do
+      ast = [{:a, [line: 1], nil}, {:b, [line: 2], nil}]
+      normalized = FunctionExtractor.normalize_ast(ast)
+
+      assert normalized == [{:a, [], nil}, {:b, [], nil}]
+    end
+
+    test "handles atoms and other primitives" do
+      assert FunctionExtractor.normalize_ast(:foo) == :foo
+      assert FunctionExtractor.normalize_ast(42) == 42
+      assert FunctionExtractor.normalize_ast("string") == "string"
+    end
+  end
+
   defp get_beam_path(module) do
     module
     |> :code.which()

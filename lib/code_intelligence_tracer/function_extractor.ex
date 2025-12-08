@@ -146,6 +146,114 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   defp extract_line_from_node(_), do: 0
 
+  @doc """
+  Compute SHA256 hash of source code for a function's line range.
+
+  Reads the specified lines from the source file and computes a SHA256 hash.
+  This hash changes when formatting, comments, or code changes.
+
+  Returns `nil` if the source file doesn't exist or can't be read.
+
+  ## Parameters
+
+    - `source_file` - Absolute path to the source file
+    - `start_line` - First line of the function (1-indexed)
+    - `end_line` - Last line of the function (1-indexed)
+
+  ## Examples
+
+      iex> compute_source_sha("/path/to/lib/my_app/foo.ex", 10, 25)
+      "a1b2c3d4..."
+
+  """
+  @spec compute_source_sha(String.t(), non_neg_integer(), non_neg_integer()) :: String.t() | nil
+  def compute_source_sha(source_file, start_line, end_line) do
+    case File.read(source_file) do
+      {:ok, content} ->
+        content
+        |> String.split("\n")
+        |> Enum.slice((start_line - 1)..(end_line - 1))
+        |> Enum.join("\n")
+        |> then(&:crypto.hash(:sha256, &1))
+        |> Base.encode16(case: :lower)
+
+      {:error, _} ->
+        nil
+    end
+  end
+
+  @doc """
+  Compute SHA256 hash of normalized AST for function clauses.
+
+  Normalizes the AST to remove non-semantic metadata (line numbers, etc.)
+  and computes a SHA256 hash. This hash only changes when the actual
+  logic changes, not formatting or comments.
+
+  ## Parameters
+
+    - `clauses` - List of function clauses from debug info
+
+  ## Examples
+
+      iex> compute_ast_sha(clauses)
+      "e5f6g7h8..."
+
+  """
+  @spec compute_ast_sha(list()) :: String.t()
+  def compute_ast_sha(clauses) do
+    clauses
+    |> normalize_ast()
+    |> :erlang.term_to_binary()
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
+  end
+
+  @doc """
+  Normalize AST by stripping non-semantic metadata.
+
+  Removes `:line`, `:column`, `:counter`, `:file`, and other position
+  metadata from the AST while preserving semantic structure.
+
+  ## Parameters
+
+    - `ast` - Any Elixir AST term
+
+  ## Examples
+
+      iex> normalize_ast({:foo, [line: 1, column: 5], [:arg]})
+      {:foo, [], [:arg]}
+
+  """
+  @spec normalize_ast(term()) :: term()
+  def normalize_ast(ast) when is_list(ast) do
+    Enum.map(ast, &normalize_ast/1)
+  end
+
+  # Function clause tuple: {meta, args, guards, body}
+  def normalize_ast({meta, args, guards, body}) when is_list(meta) do
+    normalized_meta = strip_position_metadata(meta)
+    {normalized_meta, normalize_ast(args), normalize_ast(guards), normalize_ast(body)}
+  end
+
+  # Standard AST node: {form, meta, args}
+  def normalize_ast({form, meta, args}) when is_list(meta) do
+    normalized_meta = strip_position_metadata(meta)
+    normalized_args = normalize_ast(args)
+    {form, normalized_meta, normalized_args}
+  end
+
+  def normalize_ast({left, right}) do
+    {normalize_ast(left), normalize_ast(right)}
+  end
+
+  def normalize_ast(other), do: other
+
+  # Strip position-related metadata keys
+  defp strip_position_metadata(meta) do
+    meta
+    |> Keyword.drop([:line, :column, :counter, :file, :end_of_expression, :newlines, :closing, :do, :end])
+  end
+
   # Convert absolute path to relative path
   # Strips everything up to and including "lib/" or "test/"
   defp make_relative_path(absolute_path) do

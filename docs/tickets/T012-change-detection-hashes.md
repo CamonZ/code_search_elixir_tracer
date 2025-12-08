@@ -10,18 +10,18 @@ Compute SHA hashes for change detection.
 
 ## Acceptance Criteria
 
-- [ ] Implement `compute_source_sha/3` (source_file, start_line, end_line)
+- [x] Implement `compute_source_sha/3` (source_file, start_line, end_line)
   - Read source file lines for function range
   - Compute SHA256 of the text
   - Return hex-encoded hash string
-- [ ] Implement `compute_ast_sha/1` (function_clauses)
+- [x] Implement `compute_ast_sha/1` (function_clauses)
   - Normalize AST to remove non-semantic metadata
   - Compute SHA256 of normalized term
   - Return hex-encoded hash string
-- [ ] Implement `normalize_ast/1`
+- [x] Implement `normalize_ast/1`
   - Strip `:line`, `:column`, `:counter`, `:file` from metadata
   - Preserve semantic structure
-- [ ] Handle missing source files (return nil)
+- [x] Handle missing source files (return nil)
 
 ## Files to Modify
 
