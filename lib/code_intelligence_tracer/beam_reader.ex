@@ -74,4 +74,43 @@ defmodule CodeIntelligenceTracer.BeamReader do
   defp format_beam_error(reason) do
     "BEAM file error: #{inspect(reason)}"
   end
+
+  @doc """
+  Extract Elixir debug info from BEAM chunks.
+
+  Parses the `:debug_info` chunk using the Elixir backend to get module metadata
+  including function definitions, source file path, and struct definitions.
+
+  Returns `{:ok, debug_info_map}` with keys like `:definitions`, `:file`, `:module`,
+  `:signatures`, and `:struct`.
+
+  Returns `{:error, reason}` if debug info is missing or not in Elixir format.
+  """
+  @spec extract_debug_info(map(), module()) ::
+          {:ok, map()} | {:error, String.t()}
+  def extract_debug_info(chunks, module) do
+    case chunks[:debug_info] do
+      nil ->
+        {:error, "No debug_info chunk available"}
+
+      {:debug_info_v1, backend, data} ->
+        extract_elixir_debug_info(backend, module, data)
+
+      _other ->
+        {:error, "Unsupported debug_info format"}
+    end
+  end
+
+  defp extract_elixir_debug_info(backend, module, data) do
+    case backend.debug_info(:elixir_v1, module, data, []) do
+      {:ok, info} ->
+        {:ok, info}
+
+      {:error, :missing} ->
+        {:error, "Debug info missing for module"}
+
+      {:error, reason} ->
+        {:error, "Failed to extract debug info: #{inspect(reason)}"}
+    end
+  end
 end

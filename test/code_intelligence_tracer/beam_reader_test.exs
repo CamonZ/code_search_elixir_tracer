@@ -77,7 +77,63 @@ defmodule CodeIntelligenceTracer.BeamReaderTest do
     end
   end
 
+  describe "extract_debug_info/2" do
+    test "extracts debug info from Elixir module" do
+      beam_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+      {:ok, {module, chunks}} = BeamReader.read_chunks(beam_path)
+
+      assert {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      assert is_map(debug_info)
+      assert Map.has_key?(debug_info, :definitions)
+      assert Map.has_key?(debug_info, :module)
+      assert debug_info.module == CodeIntelligenceTracer.BeamReader
+    end
+
+    test "debug info contains function definitions" do
+      beam_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+      {:ok, {module, chunks}} = BeamReader.read_chunks(beam_path)
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      assert is_list(debug_info.definitions)
+      # Should have at least read_chunks and extract_debug_info
+      function_names =
+        Enum.map(debug_info.definitions, fn {{name, _arity}, _kind, _meta, _clauses} -> name end)
+
+      assert :read_chunks in function_names
+      assert :extract_debug_info in function_names
+    end
+
+    test "debug info contains source file path" do
+      beam_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+      {:ok, {module, chunks}} = BeamReader.read_chunks(beam_path)
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      assert is_binary(debug_info.file)
+      assert String.ends_with?(debug_info.file, "beam_reader.ex")
+    end
+
+    test "returns error for Erlang-only modules" do
+      # :lists is a pure Erlang module without Elixir debug info
+      beam_path = get_beam_path(:lists)
+      {:ok, {module, chunks}} = BeamReader.read_chunks(beam_path)
+
+      assert {:error, message} = BeamReader.extract_debug_info(chunks, module)
+      # Erlang modules use :erl_abstract_code backend which returns :unknown_format for :elixir_v1
+      assert message =~ "unknown_format" or message =~ "Unsupported" or message =~ "missing"
+    end
+
+    test "returns error for missing debug_info chunk" do
+      chunks = %{debug_info: nil, attributes: [], abstract_code: nil}
+
+      assert {:error, message} = BeamReader.extract_debug_info(chunks, SomeModule)
+      assert message =~ "No debug_info chunk available"
+    end
+  end
+
   defp get_beam_path(module) do
-    :code.which(module) |> to_string()
+    module
+    |> :code.which()
+    |> to_string()
   end
 end

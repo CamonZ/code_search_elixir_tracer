@@ -10,11 +10,11 @@ Parse Elixir debug info from BEAM chunks to get module metadata.
 
 ## Acceptance Criteria
 
-- [ ] Implement `extract_debug_info/2` (chunks, module) in BeamReader
+- [x] Implement `extract_debug_info/2` (chunks, module) in BeamReader
   - Handle `:debug_info_v1` format with backend callback
   - Call `backend.debug_info(:elixir_v1, module, data, [])`
   - Returns `{:ok, debug_info_map}` or `{:error, reason}`
-- [ ] Debug info map contains:
+- [x] Debug info map contains:
   - `:definitions` - list of function definitions with AST
   - `:file` - source file path
   - `:module` - module atom
