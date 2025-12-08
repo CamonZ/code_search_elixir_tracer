@@ -233,4 +233,66 @@ defmodule CodeIntelligenceTracer.BuildDiscoveryTest do
       end
     end
   end
+
+  describe "find_beam_files/1" do
+    test "finds BEAM files in populated ebin" do
+      project_path = File.cwd!()
+      {:ok, build_lib_path} = BuildDiscovery.find_build_dir(project_path, "dev")
+      ebin_path = Path.join([build_lib_path, "code_search_elixir_tracer", "ebin"])
+
+      beam_files = BuildDiscovery.find_beam_files(ebin_path)
+
+      assert is_list(beam_files)
+      assert length(beam_files) > 0
+
+      # All files should be absolute paths ending in .beam
+      Enum.each(beam_files, fn path ->
+        assert String.ends_with?(path, ".beam")
+        assert Path.type(path) == :absolute
+      end)
+
+      # Should include our main module
+      assert Enum.any?(beam_files, &String.contains?(&1, "Elixir.CodeIntelligenceTracer"))
+    end
+
+    test "returns empty list for empty directory" do
+      tmp_dir = System.tmp_dir!()
+      empty_ebin = Path.join(tmp_dir, "empty_ebin_#{:rand.uniform(1000)}")
+      File.mkdir_p!(empty_ebin)
+
+      try do
+        assert [] = BuildDiscovery.find_beam_files(empty_ebin)
+      after
+        File.rm_rf!(empty_ebin)
+      end
+    end
+
+    test "returns empty list for nonexistent directory" do
+      assert [] = BuildDiscovery.find_beam_files("/nonexistent/ebin/path")
+    end
+
+    test "only returns Elixir modules (Elixir.*.beam)" do
+      tmp_dir = System.tmp_dir!()
+      test_ebin = Path.join(tmp_dir, "test_ebin_#{:rand.uniform(1000)}")
+      File.mkdir_p!(test_ebin)
+
+      # Create an Elixir module BEAM file
+      elixir_beam = Path.join(test_ebin, "Elixir.MyModule.beam")
+      File.write!(elixir_beam, "fake beam content")
+
+      # Create an Erlang module BEAM file (no Elixir. prefix)
+      erlang_beam = Path.join(test_ebin, "my_erlang_module.beam")
+      File.write!(erlang_beam, "fake beam content")
+
+      try do
+        beam_files = BuildDiscovery.find_beam_files(test_ebin)
+
+        assert length(beam_files) == 1
+        assert Enum.any?(beam_files, &String.contains?(&1, "Elixir.MyModule.beam"))
+        refute Enum.any?(beam_files, &String.contains?(&1, "my_erlang_module.beam"))
+      after
+        File.rm_rf!(test_ebin)
+      end
+    end
+  end
 end

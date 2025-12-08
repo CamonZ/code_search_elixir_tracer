@@ -10,12 +10,12 @@ Find all BEAM files in an application's ebin directory.
 
 ## Acceptance Criteria
 
-- [ ] Implement `find_beam_files/1` (ebin_path) in BuildDiscovery
+- [x] Implement `find_beam_files/1` (ebin_path) in BuildDiscovery
   - Use `Path.wildcard` for `*.beam` pattern
   - Filter to only `Elixir.*.beam` files (skip Erlang modules)
   - Return list of absolute paths
-- [ ] Handle empty directories (return empty list)
-- [ ] Handle non-existent directories (return error)
+- [x] Handle empty directories (return empty list)
+- [x] Handle non-existent directories (return empty list)
 
 ## Files to Modify
 

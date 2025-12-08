@@ -163,4 +163,27 @@ defmodule CodeIntelligenceTracer.BuildDiscovery do
   end
 
   defp has_ebin?({_app_name, ebin_path}), do: File.dir?(ebin_path)
+
+  @doc """
+  Find all Elixir BEAM files in an application's ebin directory.
+
+  Returns a list of absolute paths to BEAM files that are Elixir modules
+  (files matching `Elixir.*.beam` pattern).
+
+  Returns an empty list if the directory is empty or doesn't exist.
+
+  ## Examples
+
+      iex> find_beam_files("/path/to/app/ebin")
+      ["/path/to/app/ebin/Elixir.MyApp.beam", "/path/to/app/ebin/Elixir.MyApp.Foo.beam"]
+
+  """
+  @spec find_beam_files(String.t()) :: [String.t()]
+  def find_beam_files(ebin_path) do
+    pattern = Path.join(ebin_path, "Elixir.*.beam")
+
+    pattern
+    |> Path.wildcard()
+    |> Enum.map(&Path.expand/1)
+  end
 end
