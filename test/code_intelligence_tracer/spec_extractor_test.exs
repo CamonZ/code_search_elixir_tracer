@@ -726,4 +726,215 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer()) :: t()"
     end
   end
+
+  # =============================================================================
+  # T021: correlate_specs/2 tests
+  # =============================================================================
+
+  describe "correlate_specs/2" do
+    test "adds specs to matching functions" do
+      functions = %{
+        "foo/1" => %{start_line: 10, end_line: 15, kind: :def},
+        "bar/0" => %{start_line: 20, end_line: 25, kind: :def}
+      }
+
+      specs = [
+        %{
+          name: :foo,
+          arity: 1,
+          kind: :spec,
+          line: 9,
+          clauses: [
+            {:type, {9, 9}, :fun,
+             [
+               {:type, {9, 9}, :product, [{:type, {9, 18}, :integer, []}]},
+               {:type, {9, 30}, :atom, []}
+             ]}
+          ]
+        }
+      ]
+
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      # foo/1 should have the spec
+      assert result["foo/1"].spec != nil
+      assert result["foo/1"].spec.kind == :spec
+      assert result["foo/1"].spec.line == 9
+      assert result["foo/1"].spec.full == "@spec foo(integer()) :: atom()"
+
+      # bar/0 should have spec: nil
+      assert result["bar/0"].spec == nil
+    end
+
+    test "handles functions without specs" do
+      functions = %{
+        "foo/0" => %{start_line: 10, kind: :def},
+        "bar/1" => %{start_line: 20, kind: :def}
+      }
+
+      specs = []
+
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      assert result["foo/0"].spec == nil
+      assert result["bar/1"].spec == nil
+    end
+
+    test "handles multiple arities correctly" do
+      functions = %{
+        "foo/0" => %{start_line: 10, kind: :def},
+        "foo/1" => %{start_line: 15, kind: :def},
+        "foo/2" => %{start_line: 20, kind: :def}
+      }
+
+      specs = [
+        %{
+          name: :foo,
+          arity: 1,
+          kind: :spec,
+          line: 14,
+          clauses: [
+            {:type, {14, 9}, :fun,
+             [
+               {:type, {14, 9}, :product, [{:type, {14, 18}, :integer, []}]},
+               {:type, {14, 30}, :atom, []}
+             ]}
+          ]
+        },
+        %{
+          name: :foo,
+          arity: 2,
+          kind: :spec,
+          line: 19,
+          clauses: [
+            {:type, {19, 9}, :fun,
+             [
+               {:type, {19, 9}, :product,
+                [
+                  {:type, {19, 18}, :integer, []},
+                  {:type, {19, 28}, :binary, []}
+                ]},
+               {:type, {19, 40}, :atom, []}
+             ]}
+          ]
+        }
+      ]
+
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      # foo/0 has no spec
+      assert result["foo/0"].spec == nil
+
+      # foo/1 has spec
+      assert result["foo/1"].spec != nil
+      assert result["foo/1"].spec.full == "@spec foo(integer()) :: atom()"
+
+      # foo/2 has spec
+      assert result["foo/2"].spec != nil
+      assert result["foo/2"].spec.full == "@spec foo(integer(), binary()) :: atom()"
+    end
+
+    test "excludes __info__ specs" do
+      functions = %{
+        "foo/0" => %{start_line: 10, kind: :def}
+      }
+
+      specs = [
+        %{
+          name: :__info__,
+          arity: 1,
+          kind: :spec,
+          line: 1,
+          clauses: [{:type, {1, 9}, :fun, []}]
+        },
+        %{
+          name: :foo,
+          arity: 0,
+          kind: :spec,
+          line: 9,
+          clauses: [
+            {:type, {9, 9}, :fun,
+             [
+               {:type, {9, 9}, :product, []},
+               {:type, {9, 18}, :atom, []}
+             ]}
+          ]
+        }
+      ]
+
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      # Only foo/0 should have spec, __info__ should not appear
+      assert result["foo/0"].spec != nil
+      assert result["foo/0"].spec.full == "@spec foo() :: atom()"
+    end
+
+    test "preserves original function info" do
+      functions = %{
+        "foo/1" => %{
+          start_line: 10,
+          end_line: 15,
+          kind: :def,
+          source_file: "lib/foo.ex",
+          custom_field: "preserved"
+        }
+      }
+
+      specs = [
+        %{
+          name: :foo,
+          arity: 1,
+          kind: :spec,
+          line: 9,
+          clauses: [
+            {:type, {9, 9}, :fun,
+             [
+               {:type, {9, 9}, :product, [{:type, {9, 18}, :integer, []}]},
+               {:type, {9, 30}, :atom, []}
+             ]}
+          ]
+        }
+      ]
+
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      # Original fields should be preserved
+      assert result["foo/1"].start_line == 10
+      assert result["foo/1"].end_line == 15
+      assert result["foo/1"].kind == :def
+      assert result["foo/1"].source_file == "lib/foo.ex"
+      assert result["foo/1"].custom_field == "preserved"
+
+      # Spec should be added
+      assert result["foo/1"].spec != nil
+    end
+  end
+
+  describe "correlate_specs/2 with real BEAM data" do
+    test "correlates specs with functions from Stats module" do
+      beam_path =
+        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.Stats.beam"
+
+      {:ok, {_module, chunks}} = CodeIntelligenceTracer.BeamReader.read_chunks(beam_path)
+      {:ok, debug_info} = CodeIntelligenceTracer.BeamReader.extract_debug_info(chunks, CodeIntelligenceTracer.Stats)
+
+      # Extract functions and specs
+      functions =
+        debug_info.definitions
+        |> CodeIntelligenceTracer.FunctionExtractor.extract_functions("")
+
+      specs = SpecExtractor.extract_specs(chunks)
+
+      # Correlate
+      result = SpecExtractor.correlate_specs(functions, specs)
+
+      # new/0 should have spec
+      assert result["new/0"].spec != nil
+      assert result["new/0"].spec.full == "@spec new() :: t()"
+
+      # record_success/3 should have spec
+      assert result["record_success/3"].spec != nil
+      assert result["record_success/3"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()"]
+    end
+  end
 end

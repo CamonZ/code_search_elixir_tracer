@@ -494,4 +494,92 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   defp format_map_field(_) do
     "term() => term()"
   end
+
+  # =============================================================================
+  # Spec-Function Correlation (T021)
+  # =============================================================================
+
+  @doc """
+  Correlate specs with function locations.
+
+  Takes a map of function locations (from FunctionExtractor) and a list of
+  specs (from extract_specs/1), and adds the formatted spec to each matching
+  function location.
+
+  Functions without specs will have `spec: nil`.
+
+  ## Parameters
+
+    - `functions` - Map of "name/arity" => function info
+    - `specs` - List of spec records from extract_specs/1
+
+  ## Returns
+
+  The functions map with an added `:spec` key containing the formatted spec
+  for matching functions.
+
+  ## Examples
+
+      iex> functions = %{"foo/1" => %{start_line: 10, kind: :def, ...}}
+      iex> specs = [%{name: :foo, arity: 1, kind: :spec, ...}]
+      iex> correlate_specs(functions, specs)
+      %{
+        "foo/1" => %{
+          start_line: 10,
+          kind: :def,
+          spec: %{
+            kind: :spec,
+            line: 9,
+            inputs_string: ["integer()"],
+            return_string: "atom()",
+            full: "@spec foo(integer()) :: atom()"
+          }
+        }
+      }
+
+  """
+  @spec correlate_specs(map(), [spec_record()]) :: map()
+  def correlate_specs(functions, specs) do
+    # Build a lookup map of specs by name/arity
+    specs_by_key =
+      specs
+      |> Enum.reject(&(&1.name == :__info__))
+      |> Enum.map(fn spec ->
+        key = "#{spec.name}/#{spec.arity}"
+        formatted = format_spec(spec)
+        # Flatten to just the first clause for the function location
+        # (most specs have only one clause)
+        simplified = simplify_spec_for_function(formatted)
+        {key, simplified}
+      end)
+      |> Map.new()
+
+    # Add specs to matching functions
+    functions
+    |> Enum.into(%{}, fn {func_key, func_info} ->
+      spec = Map.get(specs_by_key, func_key)
+      {func_key, Map.put(func_info, :spec, spec)}
+    end)
+  end
+
+  # Simplify formatted spec for embedding in function location
+  defp simplify_spec_for_function(%{kind: kind, line: line, clauses: [clause | _]}) do
+    %{
+      kind: kind,
+      line: line,
+      inputs_string: clause.inputs_string,
+      return_string: clause.return_string,
+      full: clause.full
+    }
+  end
+
+  defp simplify_spec_for_function(%{kind: kind, line: line, clauses: []}) do
+    %{
+      kind: kind,
+      line: line,
+      inputs_string: [],
+      return_string: "any()",
+      full: ""
+    }
+  end
 end

@@ -10,11 +10,11 @@ Link specs to their function locations.
 
 ## Acceptance Criteria
 
-- [ ] Implement `correlate_specs/2` (functions, specs) in SpecExtractor
+- [x] Implement `correlate_specs/2` (functions, specs) in SpecExtractor
   - Match spec by function name and arity
   - Add `:spec` key to function location entry
-- [ ] Handle functions without specs (`:spec` is `nil`)
-- [ ] Handle multiple arities correctly
+- [x] Handle functions without specs (`:spec` is `nil`)
+- [x] Handle multiple arities correctly
 
 ## Files to Modify
 
