@@ -131,6 +131,108 @@ defmodule CodeIntelligenceTracer.BeamReaderTest do
     end
   end
 
+  describe "collect_module_names/1" do
+    test "collects module names from BEAM paths" do
+      beam_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+
+      modules = BeamReader.collect_module_names([beam_path])
+
+      assert %MapSet{} = modules
+      assert MapSet.member?(modules, "CodeIntelligenceTracer.BeamReader")
+    end
+
+    test "collects multiple module names" do
+      beam_paths = [
+        get_beam_path(CodeIntelligenceTracer.BeamReader),
+        get_beam_path(CodeIntelligenceTracer.BuildDiscovery)
+      ]
+
+      modules = BeamReader.collect_module_names(beam_paths)
+
+      assert MapSet.size(modules) == 2
+      assert MapSet.member?(modules, "CodeIntelligenceTracer.BeamReader")
+      assert MapSet.member?(modules, "CodeIntelligenceTracer.BuildDiscovery")
+    end
+
+    test "returns MapSet for O(1) lookup" do
+      beam_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+      modules = BeamReader.collect_module_names([beam_path])
+
+      # MapSet provides O(1) membership check
+      assert %MapSet{} = modules
+    end
+
+    test "skips invalid BEAM files" do
+      tmp_path = Path.join(System.tmp_dir!(), "invalid_#{:rand.uniform(1000)}.beam")
+      File.write!(tmp_path, "not a beam file")
+
+      valid_path = get_beam_path(CodeIntelligenceTracer.BeamReader)
+
+      try do
+        modules = BeamReader.collect_module_names([tmp_path, valid_path])
+
+        # Should only have the valid module
+        assert MapSet.size(modules) == 1
+        assert MapSet.member?(modules, "CodeIntelligenceTracer.BeamReader")
+      after
+        File.rm!(tmp_path)
+      end
+    end
+
+    test "returns empty MapSet for empty input" do
+      modules = BeamReader.collect_module_names([])
+      assert modules == MapSet.new()
+    end
+
+    test "strips Elixir. prefix from module names" do
+      beam_path = get_beam_path(Enum)
+      modules = BeamReader.collect_module_names([beam_path])
+
+      assert MapSet.member?(modules, "Enum")
+      refute MapSet.member?(modules, "Elixir.Enum")
+    end
+  end
+
+  describe "collect_modules_from_apps/1" do
+    test "collects modules from app directories" do
+      project_path = File.cwd!()
+
+      {:ok, build_lib_path} =
+        CodeIntelligenceTracer.BuildDiscovery.find_build_dir(project_path, "dev")
+
+      app_dirs = [{"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}]
+
+      modules = BeamReader.collect_modules_from_apps(app_dirs)
+
+      assert %MapSet{} = modules
+      assert MapSet.size(modules) > 0
+      assert MapSet.member?(modules, "CodeIntelligenceTracer.BeamReader")
+      assert MapSet.member?(modules, "CodeIntelligenceTracer.BuildDiscovery")
+    end
+
+    test "collects from multiple apps" do
+      project_path = File.cwd!()
+
+      {:ok, build_lib_path} =
+        CodeIntelligenceTracer.BuildDiscovery.find_build_dir(project_path, "dev")
+
+      # Our project only has one app, but test the structure
+      app_dirs = [
+        {"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}
+      ]
+
+      modules = BeamReader.collect_modules_from_apps(app_dirs)
+
+      # Should have multiple modules from the app
+      assert MapSet.size(modules) >= 3
+    end
+
+    test "returns empty MapSet for empty app list" do
+      modules = BeamReader.collect_modules_from_apps([])
+      assert modules == MapSet.new()
+    end
+  end
+
   defp get_beam_path(module) do
     module
     |> :code.which()

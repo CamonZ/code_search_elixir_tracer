@@ -113,4 +113,75 @@ defmodule CodeIntelligenceTracer.BeamReader do
         {:error, "Failed to extract debug info: #{inspect(reason)}"}
     end
   end
+
+  @doc """
+  Collect module names from a list of BEAM file paths.
+
+  Uses `:beam_lib.info/1` to quickly extract module names without reading
+  full chunks. Returns a `MapSet` of module name strings for O(1) lookup.
+
+  Invalid or unreadable BEAM files are silently skipped.
+
+  ## Examples
+
+      iex> collect_module_names(["/path/to/Elixir.MyApp.Foo.beam"])
+      MapSet.new(["MyApp.Foo"])
+
+  """
+  @spec collect_module_names([String.t()]) :: MapSet.t()
+  def collect_module_names(beam_paths) do
+    beam_paths
+    |> Enum.reduce(MapSet.new(), fn beam_path, acc ->
+      case get_module_name(beam_path) do
+        {:ok, module_string} -> MapSet.put(acc, module_string)
+        :error -> acc
+      end
+    end)
+  end
+
+  @doc """
+  Collect module names from multiple app directories.
+
+  Takes a list of `{app_name, ebin_path}` tuples (as returned by
+  `BuildDiscovery.find_app_directories/1`) and collects all module
+  names into a single `MapSet`.
+
+  ## Examples
+
+      iex> apps = [{"my_app", "/path/to/my_app/ebin"}]
+      iex> collect_modules_from_apps(apps)
+      MapSet.new(["MyApp", "MyApp.Foo", "MyApp.Bar"])
+
+  """
+  @spec collect_modules_from_apps([{String.t(), String.t()}]) :: MapSet.t()
+  def collect_modules_from_apps(app_dirs) do
+    alias CodeIntelligenceTracer.BuildDiscovery
+
+    app_dirs
+    |> Enum.flat_map(fn {_app_name, ebin_path} ->
+      BuildDiscovery.find_beam_files(ebin_path)
+    end)
+    |> collect_module_names()
+  end
+
+  defp get_module_name(beam_path) do
+    charlist_path = String.to_charlist(beam_path)
+
+    case :beam_lib.info(charlist_path) do
+      {:error, :beam_lib, _reason} ->
+        :error
+
+      info when is_list(info) ->
+        case Keyword.get(info, :module) do
+          nil -> :error
+          module -> {:ok, module_to_string(module)}
+        end
+    end
+  end
+
+  defp module_to_string(module) when is_atom(module) do
+    module
+    |> Atom.to_string()
+    |> String.replace_leading("Elixir.", "")
+  end
 end

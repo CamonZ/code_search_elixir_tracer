@@ -10,13 +10,13 @@ Build set of known modules for targeted filtering.
 
 ## Acceptance Criteria
 
-- [ ] Implement `collect_module_names/1` (beam_paths) in BeamReader
+- [x] Implement `collect_module_names/1` (beam_paths) in BeamReader
   - Extract module name from each BEAM file using `:beam_lib.info/1`
   - Return `MapSet` of module name strings
-- [ ] Implement `collect_modules_from_apps/1` (app_dirs)
+- [x] Implement `collect_modules_from_apps/1` (app_dirs)
   - Iterate over app directories
   - Collect all module names into single MapSet
-- [ ] Handle invalid BEAM files gracefully (skip them)
+- [x] Handle invalid BEAM files gracefully (skip them)
 
 ## Files to Modify
 
