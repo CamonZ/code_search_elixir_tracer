@@ -169,9 +169,12 @@ defmodule CodeIntelligenceTracer.Output do
 
   defp format_function_info(info) do
     %{
+      line: info.line,
       start_line: info.start_line,
       end_line: info.end_line,
       kind: to_string(info.kind),
+      guard: info.guard,
+      pattern: info.pattern,
       source_file: info.source_file,
       source_file_absolute: info.source_file_absolute,
       source_sha: info[:source_sha],

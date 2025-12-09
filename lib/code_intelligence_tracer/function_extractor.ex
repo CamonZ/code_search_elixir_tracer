@@ -7,24 +7,35 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   ## Function Record Structure
 
-  Returns a map keyed by "function_name/arity" with values containing:
+  Returns a map keyed by "function_name/arity:line" with values containing
+  one entry per function clause:
 
       %{
-        start_line: 10,
-        end_line: 25,
+        line: 10,
         kind: :def,
+        guard: "is_binary(x)",
+        pattern: "x",
         source_file: "lib/my_app/foo.ex",
-        source_file_absolute: "/full/path/lib/my_app/foo.ex"
+        source_file_absolute: "/full/path/lib/my_app/foo.ex",
+        source_sha: "a1b2c3...",
+        ast_sha: "d4e5f6..."
       }
+
+  Multi-clause functions produce multiple entries, one per clause.
 
   """
 
   @type function_kind :: :def | :defp | :defmacro | :defmacrop
 
-  @type function_info :: %{
+  @type clause_info :: %{
+          name: String.t(),
+          arity: non_neg_integer(),
+          line: non_neg_integer(),
           start_line: non_neg_integer(),
           end_line: non_neg_integer(),
           kind: function_kind(),
+          guard: String.t() | nil,
+          pattern: String.t(),
           source_file: String.t(),
           source_file_absolute: String.t(),
           source_sha: String.t() | nil,
@@ -35,7 +46,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   Extract function definitions with locations from debug info.
 
   Takes the definitions list from debug info and the source file path.
-  Returns a map keyed by "function_name/arity".
+  Returns a map keyed by "function_name/arity:line" with one entry per clause.
 
   ## Parameters
 
@@ -46,18 +57,19 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
       iex> extract_functions(definitions, "/path/to/lib/my_app/foo.ex")
       %{
-        "process/2" => %{start_line: 10, end_line: 25, kind: :def, ...},
-        "helper/1" => %{start_line: 27, end_line: 30, kind: :defp, ...}
+        "process/2:10" => %{line: 10, kind: :def, guard: nil, pattern: "x, y", ...},
+        "process/2:15" => %{line: 15, kind: :def, guard: "is_list(y)", pattern: "x, y", ...},
+        "helper/1:27" => %{line: 27, kind: :defp, guard: nil, pattern: "_x", ...}
       }
 
   """
-  @spec extract_functions(list(), String.t()) :: %{String.t() => function_info()}
+  @spec extract_functions(list(), String.t()) :: %{String.t() => clause_info()}
   def extract_functions(definitions, source_file_absolute) do
     source_file = make_relative_path(source_file_absolute)
 
     definitions
-    |> Enum.map(fn definition ->
-      extract_function_info(definition, source_file, source_file_absolute)
+    |> Enum.flat_map(fn definition ->
+      extract_clause_infos(definition, source_file, source_file_absolute)
     end)
     |> Map.new()
   end
@@ -95,43 +107,118 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
     end
   end
 
-  # Extract info for a single function definition
-  defp extract_function_info({{func_name, arity}, kind, _meta, clauses}, source_file, source_file_absolute) do
-    {start_line, end_line} = compute_line_range(clauses)
+  # Extract info for each clause in a function definition
+  defp extract_clause_infos({{func_name, arity}, kind, _meta, clauses}, source_file, source_file_absolute) do
+    clauses
+    |> Enum.map(fn {meta, args, guards, body} = clause ->
+      line = Keyword.get(meta, :line, 0)
+      end_line = max(line, find_max_line(body))
+      clause_key = "#{func_name}/#{arity}:#{line}"
 
-    function_key = "#{func_name}/#{arity}"
+      clause_info = %{
+        name: to_string(func_name),
+        arity: arity,
+        line: line,
+        start_line: line,
+        end_line: end_line,
+        kind: kind,
+        guard: extract_guard(guards),
+        pattern: args_to_string(args),
+        source_file: source_file,
+        source_file_absolute: source_file_absolute,
+        source_sha: compute_source_sha(source_file_absolute, line, end_line),
+        ast_sha: compute_clause_ast_sha(clause)
+      }
 
-    function_info = %{
-      start_line: start_line,
-      end_line: end_line,
-      kind: kind,
-      source_file: source_file,
-      source_file_absolute: source_file_absolute,
-      source_sha: compute_source_sha(source_file_absolute, start_line, end_line),
-      ast_sha: compute_ast_sha(clauses)
-    }
-
-    {function_key, function_info}
+      {clause_key, clause_info}
+    end)
   end
 
-  # Compute the line range from all clauses
-  # For multi-clause functions, returns the first line of first clause
-  # and the last line of the last clause's body
-  defp compute_line_range(clauses) do
-    lines =
-      clauses
-      |> Enum.flat_map(fn {meta, _args, _guards, body} ->
-        clause_start = Keyword.get(meta, :line, 0)
-        body_end = find_max_line(body)
-        [clause_start, body_end]
-      end)
-      |> Enum.filter(&(&1 > 0))
+  # Extract guard expression from a single clause as string
+  defp extract_guard([]), do: nil
+  defp extract_guard([single_guard]), do: guard_to_string(single_guard)
+  defp extract_guard(multiple_guards), do: multiple_guards |> Enum.map(&guard_to_string/1) |> Enum.join(" and ")
 
-    case lines do
-      [] -> {0, 0}
-      lines -> {Enum.min(lines), Enum.max(lines)}
-    end
+  # Convert function arguments to human-readable string
+  defp args_to_string([]), do: ""
+  defp args_to_string(args) do
+    args
+    |> Enum.map(&arg_to_string/1)
+    |> Enum.join(", ")
   end
+
+  # Convert a single argument AST to string
+  defp arg_to_string(arg) do
+    arg
+    |> normalize_arg_ast()
+    |> Macro.to_string()
+  end
+
+  # Normalize argument AST for readable output
+  # Simplifies variable references and pattern matching
+  defp normalize_arg_ast({:=, _meta, [left, right]}) do
+    # Pattern match assignment: `{:ok, value} = result` -> show as `{:ok, value} = result`
+    {:=, [], [normalize_arg_ast(left), normalize_arg_ast(right)]}
+  end
+
+  defp normalize_arg_ast({name, _meta, context}) when is_atom(name) and is_atom(context) do
+    # Simple variable reference
+    {name, [], context}
+  end
+
+  defp normalize_arg_ast({form, _meta, args}) when is_list(args) do
+    {form, [], Enum.map(args, &normalize_arg_ast/1)}
+  end
+
+  defp normalize_arg_ast({left, right}) do
+    {normalize_arg_ast(left), normalize_arg_ast(right)}
+  end
+
+  defp normalize_arg_ast(list) when is_list(list) do
+    Enum.map(list, &normalize_arg_ast/1)
+  end
+
+  defp normalize_arg_ast(other), do: other
+
+  # Convert a guard AST to a human-readable string
+  # Guards in debug info use Erlang form like {:., [], [:erlang, :is_binary]}
+  defp guard_to_string(guard_ast) do
+    guard_ast
+    |> normalize_guard_ast()
+    |> Macro.to_string()
+  end
+
+  # Convert Erlang-style guard calls to Elixir-style for readable output
+  # NOTE: Specific patterns for andalso/orelse must come before the general :erlang pattern
+  defp normalize_guard_ast({{:., _meta, [:erlang, :andalso]}, call_meta, [left, right]}) do
+    # Convert :erlang.andalso to `and`
+    {:and, call_meta, [normalize_guard_ast(left), normalize_guard_ast(right)]}
+  end
+
+  defp normalize_guard_ast({{:., _meta, [:erlang, :orelse]}, call_meta, [left, right]}) do
+    # Convert :erlang.orelse to `or`
+    {:or, call_meta, [normalize_guard_ast(left), normalize_guard_ast(right)]}
+  end
+
+  defp normalize_guard_ast({{:., _meta, [:erlang, func]}, call_meta, args}) do
+    # Convert :erlang.is_binary(x) to is_binary(x)
+    normalized_args = Enum.map(args, &normalize_guard_ast/1)
+    {func, call_meta, normalized_args}
+  end
+
+  defp normalize_guard_ast({form, meta, args}) when is_list(args) do
+    {form, meta, Enum.map(args, &normalize_guard_ast/1)}
+  end
+
+  defp normalize_guard_ast({left, right}) do
+    {normalize_guard_ast(left), normalize_guard_ast(right)}
+  end
+
+  defp normalize_guard_ast(list) when is_list(list) do
+    Enum.map(list, &normalize_guard_ast/1)
+  end
+
+  defp normalize_guard_ast(other), do: other
 
   # Walk the AST to find the maximum line number
   defp find_max_line(ast) do
@@ -172,11 +259,14 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   """
   @spec compute_source_sha(String.t(), non_neg_integer(), non_neg_integer()) :: String.t() | nil
   def compute_source_sha(source_file, start_line, end_line) do
+    # Ensure end_line is at least start_line (for single-line functions, body may have no line info)
+    actual_end = max(start_line, end_line)
+
     case File.read(source_file) do
       {:ok, content} ->
         content
         |> String.split("\n")
-        |> Enum.slice((start_line - 1)..(end_line - 1))
+        |> Enum.slice((start_line - 1)..(actual_end - 1)//1)
         |> Enum.join("\n")
         |> then(&:crypto.hash(:sha256, &1))
         |> Base.encode16(case: :lower)
@@ -206,6 +296,25 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   @spec compute_ast_sha(list()) :: String.t()
   def compute_ast_sha(clauses) do
     clauses
+    |> normalize_ast()
+    |> :erlang.term_to_binary()
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
+  end
+
+  @doc """
+  Compute SHA256 hash of normalized AST for a single function clause.
+
+  Same as `compute_ast_sha/1` but for a single clause tuple.
+
+  ## Parameters
+
+    - `clause` - A single function clause tuple: `{meta, args, guards, body}`
+
+  """
+  @spec compute_clause_ast_sha(tuple()) :: String.t()
+  def compute_clause_ast_sha(clause) do
+    clause
     |> normalize_ast()
     |> :erlang.term_to_binary()
     |> then(&:crypto.hash(:sha256, &1))

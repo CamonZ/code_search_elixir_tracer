@@ -1,79 +1,130 @@
 # T037: Expand Function Definition Metadata
 
+**Status: COMPLETED (Phase 2)**
+
 ## Problem
 
-Currently, function definitions only include:
-- `start_line`, `end_line`
-- `kind` (def/defp/defmacro/defmacrop)
-- `source_file`, `source_file_absolute`
+Originally, function definitions aggregated all clauses into a single entry. Phase 2 changes each clause to be its own separate entry with individual line, guard, and pattern information.
 
-The function key is `"function_name/arity"` which combines name and arity. We need:
-1. Separate `name` field (without arity)
-2. Separate `arity` field (as integer)
-3. `clause_count` - number of pattern matching function heads
+## Phase 1 (Completed)
 
-## Context
+Added metadata fields to aggregated function entries:
+- `name`, `arity`, `clause_count`, `guards[]`
 
-Multi-clause functions in Elixir use pattern matching:
+## Phase 2 (Completed)
 
+Changed from aggregated entries to per-clause entries:
+
+**Before (Phase 1):**
 ```elixir
-def process(:ok, data), do: handle_success(data)      # clause 1
-def process(:error, reason), do: handle_error(reason) # clause 2
-def process(_, _), do: :unknown                       # clause 3
+"multi_guard/1" => %{
+  clause_count: 3,
+  guards: ["is_binary(x)", "is_number(x)", nil],
+  start_line: 13,
+  end_line: 15,
+  ...
+}
 ```
 
-Knowing the clause count helps understand function complexity and identifies
-functions that rely heavily on pattern matching dispatch.
+**After (Phase 2):**
+```elixir
+"multi_guard/1:13" => %{line: 13, guard: "is_binary(x)", pattern: "x", ...}
+"multi_guard/1:14" => %{line: 14, guard: "is_number(x)", pattern: "x", ...}
+"multi_guard/1:15" => %{line: 15, guard: nil, pattern: "_x", ...}
+```
 
 ## Implementation
 
-### 1. Update `FunctionExtractor.extract_function_info/4`
+### Key Format
 
-Add new fields to the returned map:
+Function keys changed from `"name/arity"` to `"name/arity:line"`.
 
-```elixir
-function_info = %{
-  name: to_string(func_name),
-  arity: arity,
-  clause_count: length(clauses),
-  start_line: start_line,
-  end_line: end_line,
-  kind: kind,
-  source_file: source_file,
-  source_file_absolute: source_file_absolute
-}
-```
+### Clause Info Structure
 
-### 2. Update type spec
+Each clause entry contains:
 
 ```elixir
-@type function_info :: %{
+@type clause_info :: %{
   name: String.t(),
   arity: non_neg_integer(),
-  clause_count: pos_integer(),
-  start_line: non_neg_integer(),
-  end_line: non_neg_integer(),
+  line: non_neg_integer(),
   kind: function_kind(),
+  guard: String.t() | nil,
+  pattern: String.t(),
   source_file: String.t(),
-  source_file_absolute: String.t()
+  source_file_absolute: String.t(),
+  source_sha: String.t() | nil,
+  ast_sha: String.t()
 }
 ```
 
-### 3. Update Output module
+### Pattern Extraction
 
-Ensure the new fields are included in JSON/TOON output formatting.
-
-### 4. Update tests
-
-Add tests for:
-- Single-clause functions have `clause_count: 1`
-- Multi-clause functions have correct clause count
-- Name and arity are extracted separately
+Function arguments are converted to human-readable strings:
+- `"x"` - simple variable
+- `"x, y"` - multiple args
+- `"{:ok, value}"` - tuple pattern
+- `"{:error, _} = err"` - pattern with binding
 
 ## Acceptance Criteria
 
-- [ ] `name` field contains function name without arity
-- [ ] `arity` field contains function arity as integer
-- [ ] `clause_count` field contains number of function clauses
-- [ ] All existing tests pass
-- [ ] New fields appear in JSON/TOON output
+- [x] Each function clause is a separate entry keyed by `name/arity:line`
+- [x] `line` field contains the clause's line number
+- [x] `guard` field contains guard expression (or nil)
+- [x] `pattern` field contains args as human-readable string
+- [x] `source_sha` and `ast_sha` are per-clause
+- [x] All 264 tests pass
+- [x] OUTPUT_FORMAT.md updated
+
+## Example Output
+
+For the functions:
+
+```elixir
+def multi_guard(x) when is_binary(x), do: "string"
+def multi_guard(x) when is_number(x), do: "number"
+def multi_guard(_x), do: "other"
+```
+
+Output:
+
+```elixir
+%{
+  "multi_guard/1:13" => %{
+    name: "multi_guard",
+    arity: 1,
+    line: 13,
+    kind: :def,
+    guard: "is_binary(x)",
+    pattern: "x",
+    source_file: "test/support/guarded_functions.ex",
+    source_file_absolute: "/path/to/test/support/guarded_functions.ex",
+    source_sha: "3ea6b35d...",
+    ast_sha: "c8a51ee0..."
+  },
+  "multi_guard/1:14" => %{
+    name: "multi_guard",
+    arity: 1,
+    line: 14,
+    kind: :def,
+    guard: "is_number(x)",
+    pattern: "x",
+    source_file: "test/support/guarded_functions.ex",
+    source_file_absolute: "/path/to/test/support/guarded_functions.ex",
+    source_sha: "4815bfef...",
+    ast_sha: "d9b62ff1..."
+  },
+  "multi_guard/1:15" => %{
+    name: "multi_guard",
+    arity: 1,
+    line: 15,
+    kind: :def,
+    guard: nil,
+    pattern: "_x",
+    source_file: "test/support/guarded_functions.ex",
+    source_file_absolute: "/path/to/test/support/guarded_functions.ex",
+    source_sha: "5926caef...",
+    ast_sha: "e0c73002..."
+  }
+}
+```

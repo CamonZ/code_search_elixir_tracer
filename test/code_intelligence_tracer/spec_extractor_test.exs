@@ -928,13 +928,15 @@ defmodule CodeIntelligenceTracer.SpecExtractorTest do
       # Correlate
       result = SpecExtractor.correlate_specs(functions, specs)
 
-      # new/0 should have spec
-      assert result["new/0"].spec != nil
-      assert result["new/0"].spec.full == "@spec new() :: t()"
+      # Find new/0 entry (keys are now "name/arity:line")
+      {_key, new_0} = Enum.find(result, fn {key, _} -> String.starts_with?(key, "new/0:") end)
+      assert new_0.spec != nil
+      assert new_0.spec.full == "@spec new() :: t()"
 
       # record_success/6 should have spec (default args mean function has arities 3,4,5,6 but spec is arity 6)
-      assert result["record_success/6"].spec != nil
-      assert result["record_success/6"].spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+      {_key, record_success_6} = Enum.find(result, fn {key, _} -> String.starts_with?(key, "record_success/6:") end)
+      assert record_success_6.spec != nil
+      assert record_success_6.spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
     end
   end
 

@@ -114,21 +114,27 @@ defmodule CodeIntelligenceTracer.OutputTest do
 
     test "formats function locations organized by module" do
       locations = %{
-        "process/2" => %{
+        "process/2:10" => %{
           module: "MyApp.Foo",
+          line: 10,
           start_line: 10,
           end_line: 25,
           kind: :def,
+          guard: nil,
+          pattern: "x, y",
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
           ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
         },
-        "helper/1" => %{
+        "helper/1:27" => %{
           module: "MyApp.Foo",
+          line: 27,
           start_line: 27,
           end_line: 30,
           kind: :defp,
+          guard: "is_list(x)",
+          pattern: "x",
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: nil,
@@ -145,17 +151,23 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert Map.has_key?(decoded["function_locations"], "MyApp.Foo")
 
       foo_funcs = decoded["function_locations"]["MyApp.Foo"]
-      assert Map.has_key?(foo_funcs, "process/2")
-      assert Map.has_key?(foo_funcs, "helper/1")
+      assert Map.has_key?(foo_funcs, "process/2:10")
+      assert Map.has_key?(foo_funcs, "helper/1:27")
 
-      process = foo_funcs["process/2"]
+      process = foo_funcs["process/2:10"]
+      assert process["line"] == 10
       assert process["start_line"] == 10
       assert process["end_line"] == 25
       assert process["kind"] == "def"
+      assert process["guard"] == nil
+      assert process["pattern"] == "x, y"
       assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
       assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
 
-      helper = foo_funcs["helper/1"]
+      helper = foo_funcs["helper/1:27"]
+      assert helper["line"] == 27
+      assert helper["guard"] == "is_list(x)"
+      assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
       assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
     end
@@ -289,21 +301,27 @@ defmodule CodeIntelligenceTracer.OutputTest do
 
     test "formats function locations organized by module" do
       locations = %{
-        "process/2" => %{
+        "process/2:10" => %{
           module: "MyApp.Foo",
+          line: 10,
           start_line: 10,
           end_line: 25,
           kind: :def,
+          guard: nil,
+          pattern: "x, y",
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
           ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
         },
-        "helper/1" => %{
+        "helper/1:27" => %{
           module: "MyApp.Foo",
+          line: 27,
           start_line: 27,
           end_line: 30,
           kind: :defp,
+          guard: "is_list(x)",
+          pattern: "x",
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: nil,
@@ -320,17 +338,23 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert Map.has_key?(decoded["function_locations"], "MyApp.Foo")
 
       foo_funcs = decoded["function_locations"]["MyApp.Foo"]
-      assert Map.has_key?(foo_funcs, "process/2")
-      assert Map.has_key?(foo_funcs, "helper/1")
+      assert Map.has_key?(foo_funcs, "process/2:10")
+      assert Map.has_key?(foo_funcs, "helper/1:27")
 
-      process = foo_funcs["process/2"]
+      process = foo_funcs["process/2:10"]
+      assert process["line"] == 10
       assert process["start_line"] == 10
       assert process["end_line"] == 25
       assert process["kind"] == "def"
+      assert process["guard"] == nil
+      assert process["pattern"] == "x, y"
       assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
       assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
 
-      helper = foo_funcs["helper/1"]
+      helper = foo_funcs["helper/1:27"]
+      assert helper["line"] == 27
+      assert helper["guard"] == "is_list(x)"
+      assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
       assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
     end

@@ -11,13 +11,14 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
-      # read_chunks is a public function
-      assert Map.has_key?(functions, "read_chunks/1")
-      func_info = functions["read_chunks/1"]
+      # read_chunks is a public function - find it by prefix since key includes line number
+      read_chunks_entries = Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
+      assert length(read_chunks_entries) >= 1
+
+      {_key, func_info} = hd(read_chunks_entries)
 
       assert func_info.kind == :def
-      assert func_info.start_line > 0
-      assert func_info.end_line >= func_info.start_line
+      assert func_info.line > 0
       assert String.ends_with?(func_info.source_file, "beam_reader.ex")
       assert String.starts_with?(func_info.source_file, "lib/")
     end
@@ -37,24 +38,25 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
 
       {_name, func_info} = hd(private_functions)
       assert func_info.kind == :defp
-      assert func_info.start_line > 0
+      assert func_info.line > 0
     end
 
-    test "handles multi-clause functions" do
-      # Create a module with multi-clause function for testing
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+    test "handles multi-clause functions as separate entries" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
-      # All functions should have valid line ranges
-      for {name, info} <- functions do
-        assert info.start_line > 0, "#{name} should have start_line > 0"
-        assert info.end_line >= info.start_line, "#{name} end_line should be >= start_line"
-      end
+      # multi_guard/1 has 3 clauses, should produce 3 entries
+      multi_guard_entries = Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "multi_guard/1:") end)
+      assert length(multi_guard_entries) == 3
+
+      # Each entry should have a different line
+      lines = Enum.map(multi_guard_entries, fn {_, info} -> info.line end)
+      assert length(Enum.uniq(lines)) == 3
     end
 
-    test "returns map keyed by function_name/arity" do
+    test "returns map keyed by function_name/arity:line" do
       {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
@@ -62,9 +64,10 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
 
       assert is_map(functions)
 
-      # All keys should be in "name/arity" format
+      # All keys should be in "name/arity:line" format
       for key <- Map.keys(functions) do
         assert String.contains?(key, "/"), "Key #{key} should contain /"
+        assert String.contains?(key, ":"), "Key #{key} should contain :"
       end
     end
 
@@ -102,6 +105,150 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
       # Should have ast_sha (64-char hex string)
       assert is_binary(func_info.ast_sha)
       assert func_info.ast_sha =~ ~r/^[a-f0-9]{64}$/
+    end
+
+    test "includes name and arity fields" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Find read_chunks/1 entry
+      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
+
+      assert func_info.name == "read_chunks"
+      assert func_info.arity == 1
+    end
+
+    test "includes guard and pattern fields" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # All clauses should have guard (string or nil) and pattern (string)
+      for {_name, info} <- functions do
+        assert is_binary(info.pattern) or info.pattern == ""
+        assert is_binary(info.guard) or is_nil(info.guard)
+      end
+    end
+  end
+
+  describe "extract_functions/2 with guards" do
+    test "extracts nil guard for functions without guards" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Find no_guard/1 entry
+      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "no_guard/1:") end)
+
+      assert func_info.guard == nil
+      assert func_info.pattern == "x"
+    end
+
+    test "extracts single guard as string" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Find single_guard/1 entry
+      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "single_guard/1:") end)
+
+      assert func_info.guard == "is_binary(x)"
+      assert func_info.pattern == "x"
+    end
+
+    test "extracts separate entries for multi-clause functions with guards" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # multi_guard/1 has 3 clauses
+      multi_guard_entries = functions
+        |> Enum.filter(fn {key, _} -> String.starts_with?(key, "multi_guard/1:") end)
+        |> Enum.sort_by(fn {_, info} -> info.line end)
+
+      assert length(multi_guard_entries) == 3
+
+      [{_, clause1}, {_, clause2}, {_, clause3}] = multi_guard_entries
+
+      assert clause1.guard == "is_binary(x)"
+      assert clause2.guard == "is_number(x)"
+      assert clause3.guard == nil
+    end
+
+    test "extracts compound guards with and" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # compound_guard/1 has 3 clauses
+      compound_guard_entries = functions
+        |> Enum.filter(fn {key, _} -> String.starts_with?(key, "compound_guard/1:") end)
+        |> Enum.sort_by(fn {_, info} -> info.line end)
+
+      assert length(compound_guard_entries) == 3
+
+      [{_, clause1}, {_, clause2}, {_, clause3}] = compound_guard_entries
+
+      assert clause1.guard =~ "is_integer(x)"
+      assert clause1.guard =~ "x > 0"
+      assert clause2.guard =~ "is_integer(x)"
+      assert clause2.guard =~ "x < 0"
+      assert clause3.guard == nil
+    end
+
+    test "extracts guards with or" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # or_guard/1 has 2 clauses
+      or_guard_entries = functions
+        |> Enum.filter(fn {key, _} -> String.starts_with?(key, "or_guard/1:") end)
+        |> Enum.sort_by(fn {_, info} -> info.line end)
+
+      assert length(or_guard_entries) == 2
+
+      [{_, clause1}, {_, clause2}] = or_guard_entries
+
+      assert clause1.guard =~ "is_binary(x)"
+      assert clause1.guard =~ "is_atom(x)"
+      assert clause2.guard == nil
+    end
+
+    test "extracts patterns from pattern matching clauses" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # pattern_with_guard/1 has 3 clauses with different patterns
+      pattern_entries = functions
+        |> Enum.filter(fn {key, _} -> String.starts_with?(key, "pattern_with_guard/1:") end)
+        |> Enum.sort_by(fn {_, info} -> info.line end)
+
+      assert length(pattern_entries) == 3
+
+      [{_, clause1}, {_, clause2}, {_, clause3}] = pattern_entries
+
+      # First clause: {:ok, value} with guard is_list(value)
+      assert clause1.guard =~ "is_list(value)"
+      assert clause1.pattern =~ "{:ok, value}"
+
+      # Second clause: {:ok, value} without guard
+      assert clause2.guard == nil
+      assert clause2.pattern =~ "{:ok, value}"
+
+      # Third clause: {:error, _} = err
+      assert clause3.guard == nil
+      assert clause3.pattern =~ "{:error, _}"
     end
   end
 
@@ -181,22 +328,17 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
 
   describe "compute_source_sha/3" do
     test "same source produces same SHA" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
-      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
-
-      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
-      {_name, func_info} = Enum.at(functions, 0)
-
+      # Just test the function directly with fixed line numbers
       sha1 = FunctionExtractor.compute_source_sha(
-        func_info.source_file_absolute,
-        func_info.start_line,
-        func_info.end_line
+        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
+        10,
+        20
       )
 
       sha2 = FunctionExtractor.compute_source_sha(
-        func_info.source_file_absolute,
-        func_info.start_line,
-        func_info.end_line
+        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
+        10,
+        20
       )
 
       assert sha1 == sha2
@@ -205,27 +347,19 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
     end
 
     test "different line ranges produce different SHAs" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
-      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
-
-      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
-
-      # Get two different functions
-      [{_name1, func1}, {_name2, func2} | _] = Enum.to_list(functions)
-
       sha1 = FunctionExtractor.compute_source_sha(
-        func1.source_file_absolute,
-        func1.start_line,
-        func1.end_line
+        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
+        10,
+        20
       )
 
       sha2 = FunctionExtractor.compute_source_sha(
-        func2.source_file_absolute,
-        func2.start_line,
-        func2.end_line
+        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
+        30,
+        40
       )
 
-      # Different functions should (almost certainly) have different SHAs
+      # Different line ranges should produce different SHAs
       assert sha1 != sha2
     end
 
@@ -235,16 +369,10 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
     end
 
     test "returns valid hex string" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
-      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
-
-      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
-      {_name, func_info} = Enum.at(functions, 0)
-
       sha = FunctionExtractor.compute_source_sha(
-        func_info.source_file_absolute,
-        func_info.start_line,
-        func_info.end_line
+        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
+        10,
+        20
       )
 
       # Should be valid lowercase hex

@@ -555,9 +555,12 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
       |> Map.new()
 
     # Add specs to matching functions
+    # Function keys are now "name/arity:line", we need to extract "name/arity" for matching
     functions
     |> Enum.into(%{}, fn {func_key, func_info} ->
-      spec = Map.get(specs_by_key, func_key)
+      # Extract name/arity from "name/arity:line"
+      base_key = func_key |> String.split(":") |> List.first()
+      spec = Map.get(specs_by_key, base_key)
       {func_key, Map.put(func_info, :spec, spec)}
     end)
   end

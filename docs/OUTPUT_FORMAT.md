@@ -89,27 +89,67 @@ Array of function call records. Each call represents a function invoking another
 - `defmacrop` - Private macro
 
 ### `function_locations`
-Map of modules to their function definitions. Organized by module for efficient lookup.
+Map of modules to their function clause definitions. Each clause of a multi-clause function is a separate entry, keyed by `"function_name/arity:line"`.
 
 ```json
 {
   "MyApp.Module": {
-    "my_function/2": {
-      "start_line": 10,
-      "end_line": 25,
+    "my_function/2:10": {
+      "name": "my_function",
+      "arity": 2,
+      "line": 10,
       "kind": "def",
+      "guard": null,
+      "pattern": "x, y",
       "source_file": "lib/my_app/module.ex",
       "source_file_absolute": "/path/to/project/lib/my_app/module.ex",
       "source_sha": "a1b2c3d4e5f6...",
       "ast_sha": "f6e5d4c3b2a1..."
+    },
+    "my_function/2:15": {
+      "name": "my_function",
+      "arity": 2,
+      "line": 15,
+      "kind": "def",
+      "guard": "is_list(y)",
+      "pattern": "x, y",
+      "source_file": "lib/my_app/module.ex",
+      "source_file_absolute": "/path/to/project/lib/my_app/module.ex",
+      "source_sha": "b2c3d4e5f6a1...",
+      "ast_sha": "e5d4c3b2a1f6..."
     }
   }
 }
 ```
 
+**Clause fields:**
+- `name` - Function name without arity (e.g., `"my_function"`)
+- `arity` - Number of arguments as integer
+- `line` - Line number where this clause is defined
+- `kind` - Function kind (`def`, `defp`, `defmacro`, `defmacrop`)
+- `guard` - Guard expression as string, or `null` if no guard
+- `pattern` - Function arguments as human-readable string (e.g., `"x, y"`, `"{:ok, value}"`)
+
+**Guard examples:**
+```json
+"guard": null                           // no guard
+"guard": "is_binary(x)"                 // simple guard
+"guard": "is_integer(x) and x > 0"      // compound guard with `and`
+"guard": "is_binary(x) or is_atom(x)"   // compound guard with `or`
+```
+
+**Pattern examples:**
+```json
+"pattern": "x"                          // simple variable
+"pattern": "x, y"                       // multiple args
+"pattern": "{:ok, value}"               // tuple pattern
+"pattern": "{:error, _} = err"          // pattern with binding
+"pattern": "%{name: name}"              // map pattern
+```
+
 **SHA fields:**
-- `source_sha` - SHA256 hash of the source code from `start_line` to `end_line`. Detects any change to a function (formatting, comments, code). May be `null` if the source file is unavailable.
-- `ast_sha` - SHA256 hash of the normalized AST. Detects semantic changes only (ignores formatting, comments, line numbers).
+- `source_sha` - SHA256 hash of the source code for this clause. Detects any change (formatting, comments, code). May be `null` if the source file is unavailable.
+- `ast_sha` - SHA256 hash of the normalized AST for this clause. Detects semantic changes only (ignores formatting, comments, line numbers).
 
 ### `specs`
 Map of modules to their `@spec` definitions.
@@ -225,19 +265,25 @@ A minimal example showing all sections:
   ],
   "function_locations": {
     "MyApp.Greeter": {
-      "greet/1": {
-        "start_line": 12,
-        "end_line": 18,
+      "greet/1:12": {
+        "name": "greet",
+        "arity": 1,
+        "line": 12,
         "kind": "def",
+        "guard": null,
+        "pattern": "name",
         "source_file": "lib/greeter.ex",
         "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
         "source_sha": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",
         "ast_sha": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
       },
-      "format_name/1": {
-        "start_line": 20,
-        "end_line": 22,
+      "format_name/1:20": {
+        "name": "format_name",
+        "arity": 1,
+        "line": 20,
         "kind": "defp",
+        "guard": null,
+        "pattern": "name",
         "source_file": "lib/greeter.ex",
         "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
         "source_sha": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
@@ -354,22 +400,28 @@ calls[1]:
     type: local
 function_locations:
   MyApp.Greeter:
-    format_name/1:
-      end_line: 22
+    format_name/1:20:
+      name: format_name
+      arity: 1
+      line: 20
       kind: defp
+      guard: ~
+      pattern: name
       source_file: lib/greeter.ex
       source_file_absolute: /home/user/my_app/lib/greeter.ex
       source_sha: fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321
       ast_sha: abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
-      start_line: 20
-    greet/1:
-      end_line: 18
+    greet/1:12:
+      name: greet
+      arity: 1
+      line: 12
       kind: def
+      guard: ~
+      pattern: name
       source_file: lib/greeter.ex
       source_file_absolute: /home/user/my_app/lib/greeter.ex
       source_sha: a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890
       ast_sha: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-      start_line: 12
 specs:
   MyApp.Greeter[1]:
     - arity: 1
