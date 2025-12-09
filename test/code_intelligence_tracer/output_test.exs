@@ -88,7 +88,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
           callee: %{
             module: "MyApp.Bar",
             function: "handle",
-            arity: 1
+            arity: 1,
+            args: "data"
           }
         }
       ]
@@ -210,7 +211,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
           callee: %{
             module: "MyApp.Foo",
             function: "helper",
-            arity: 0
+            arity: 0,
+            args: ""
           }
         }
       ]
@@ -275,7 +277,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
           callee: %{
             module: "MyApp.Bar",
             function: "handle",
-            arity: 1
+            arity: 1,
+            args: "data"
           }
         }
       ]
@@ -391,7 +394,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
           callee: %{
             module: "MyApp.Foo",
             function: "helper",
-            arity: 0
+            arity: 0,
+            args: ""
           }
         }
       ]

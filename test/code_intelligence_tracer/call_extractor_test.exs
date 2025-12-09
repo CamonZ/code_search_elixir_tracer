@@ -328,4 +328,106 @@ defmodule CodeIntelligenceTracer.CallExtractorTest do
       assert capture_call.callee.arity == 1
     end
   end
+
+  describe "args capture" do
+    test "captures arguments as string for remote calls" do
+      # Call: Enum.map(list, fun)
+      definitions = [
+        {{:my_function, 1}, :def, [line: 1], [
+          {[line: 2], [{:list, [line: 2], nil}], [],
+           {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
+            [{:list, [line: 3], nil}, {:fun, [line: 3], nil}]}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      [call] = calls
+      assert call.callee.args == "list, fun"
+    end
+
+    test "captures arguments as string for local calls" do
+      # Call: helper(x, y)
+      definitions = [
+        {{:my_function, 2}, :def, [line: 1], [
+          {[line: 2], [{:x, [line: 2], nil}, {:y, [line: 2], nil}], [],
+           {:helper, [line: 3], [{:x, [line: 3], nil}, {:y, [line: 3], nil}]}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      [call] = calls
+      assert call.callee.args == "x, y"
+    end
+
+    test "captures literal arguments" do
+      # Call: IO.puts("hello")
+      definitions = [
+        {{:my_function, 0}, :def, [line: 1], [
+          {[line: 2], [], [],
+           {{:., [line: 3], [{:__aliases__, [line: 3], [:IO]}, :puts]}, [line: 3],
+            ["hello"]}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      [call] = calls
+      assert call.callee.args == "\"hello\""
+    end
+
+    test "captures tuple pattern arguments" do
+      # Call: handle({:ok, value})
+      definitions = [
+        {{:my_function, 1}, :def, [line: 1], [
+          {[line: 2], [{:result, [line: 2], nil}], [],
+           {:handle, [line: 3], [{:{}, [line: 3], [:ok, {:value, [line: 3], nil}]}]}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      [call] = calls
+      assert call.callee.args =~ ":ok"
+      assert call.callee.args =~ "value"
+    end
+
+    test "captures empty args for function captures" do
+      # Call: &String.upcase/1
+      definitions = [
+        {{:my_function, 1}, :def, [line: 1], [
+          {[line: 2], [{:list, [line: 2], nil}], [],
+           {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
+            [
+              {:list, [line: 3], nil},
+              {:&, [line: 3],
+               [{:/, [line: 3],
+                 [{{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :upcase]}, [line: 3], []}, 1]}]}
+            ]}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      # Find the capture call
+      capture_call = Enum.find(calls, &(&1.callee.function == "upcase"))
+      assert capture_call.callee.args == ""
+    end
+
+    test "captures zero-arity function calls with empty args" do
+      # Call: helper()
+      definitions = [
+        {{:my_function, 0}, :def, [line: 1], [
+          {[line: 2], [], [],
+           {:helper, [line: 3], []}}
+        ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      [call] = calls
+      assert call.callee.args == ""
+    end
+  end
 end

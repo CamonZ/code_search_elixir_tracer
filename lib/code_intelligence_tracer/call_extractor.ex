@@ -43,7 +43,8 @@ defmodule CodeIntelligenceTracer.CallExtractor do
           callee: %{
             module: String.t(),
             function: String.t(),
-            arity: non_neg_integer()
+            arity: non_neg_integer(),
+            args: String.t()
           }
         }
 
@@ -168,6 +169,48 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     end)
   end
 
+  # Convert a list of argument AST nodes to a human-readable string
+  defp args_to_string([]), do: ""
+
+  defp args_to_string(args) do
+    args
+    |> Enum.map(&arg_to_string/1)
+    |> Enum.join(", ")
+  end
+
+  # Convert a single argument AST node to string
+  defp arg_to_string(arg) do
+    arg
+    |> normalize_arg_ast()
+    |> Macro.to_string()
+  end
+
+  # Normalize argument AST for readable output
+  # Handles variables, tuples, lists, literals, and complex expressions
+  defp normalize_arg_ast({:=, _meta, [left, right]}) do
+    # Pattern match assignment: `{:ok, value} = result`
+    {:=, [], [normalize_arg_ast(left), normalize_arg_ast(right)]}
+  end
+
+  defp normalize_arg_ast({name, _meta, context}) when is_atom(name) and is_atom(context) do
+    # Simple variable reference
+    {name, [], context}
+  end
+
+  defp normalize_arg_ast({form, _meta, args}) when is_list(args) do
+    {form, [], Enum.map(args, &normalize_arg_ast/1)}
+  end
+
+  defp normalize_arg_ast({left, right}) do
+    {normalize_arg_ast(left), normalize_arg_ast(right)}
+  end
+
+  defp normalize_arg_ast(list) when is_list(list) do
+    Enum.map(list, &normalize_arg_ast/1)
+  end
+
+  defp normalize_arg_ast(other), do: other
+
   defp extract_calls_from_ast(ast, module_string, function_string, kind, source_file) do
     {_ast, calls} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -211,6 +254,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   # Function capture: &Module.function/arity
   # Pattern: {:&, meta, [{:/, _, [{remote_call}, arity]}]}
   # Returns :skip to prevent walking into nested remote call
+  # Note: Function captures have explicit arity but no actual args
   defp extract_call(
          {:&, meta, [{:/, _, [{{:., _, [module, func]}, _, _args}, arity]}]},
          _caller_module
@@ -223,7 +267,8 @@ defmodule CodeIntelligenceTracer.CallExtractor do
         callee = %{
           module: module_string,
           function: to_string(func),
-          arity: arity
+          arity: arity,
+          args: ""
         }
 
         {:skip, :remote, callee, line}
@@ -236,6 +281,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   # Local function capture: &function/arity
   # Pattern: {:&, meta, [{:/, _, [{func_atom, _, _}, arity]}]}
   # Returns :skip to prevent walking into nested nodes
+  # Note: Function captures have explicit arity but no actual args
   defp extract_call(
          {:&, meta, [{:/, _, [{func, _, context}, arity]}]},
          caller_module
@@ -246,7 +292,8 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     callee = %{
       module: caller_module,
       function: to_string(func),
-      arity: arity
+      arity: arity,
+      args: ""
     }
 
     {:skip, :local, callee, line}
@@ -258,11 +305,13 @@ defmodule CodeIntelligenceTracer.CallExtractor do
       {:ok, module_string} ->
         line = Keyword.get(meta, :line, 0)
         arity = length(args)
+        args_string = args_to_string(args)
 
         callee = %{
           module: module_string,
           function: to_string(func),
-          arity: arity
+          arity: arity,
+          args: args_string
         }
 
         {:remote, callee, line}
@@ -280,11 +329,13 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     if local_function_call?(func) do
       line = Keyword.get(meta, :line, 0)
       arity = length(args)
+      args_string = args_to_string(args)
 
       callee = %{
         module: caller_module,
         function: to_string(func),
-        arity: arity
+        arity: arity,
+        args: args_string
       }
 
       {:local, callee, line}

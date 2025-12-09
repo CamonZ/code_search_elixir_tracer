@@ -149,7 +149,8 @@ defmodule CodeIntelligenceTracer.Output do
         callee: %{
           module: call.callee.module,
           function: call.callee.function,
-          arity: call.callee.arity
+          arity: call.callee.arity,
+          args: call.callee.args
         }
       }
     end)
