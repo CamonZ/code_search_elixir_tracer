@@ -26,7 +26,9 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
           end_line: non_neg_integer(),
           kind: function_kind(),
           source_file: String.t(),
-          source_file_absolute: String.t()
+          source_file_absolute: String.t(),
+          source_sha: String.t() | nil,
+          ast_sha: String.t()
         }
 
   @doc """
@@ -104,7 +106,9 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
       end_line: end_line,
       kind: kind,
       source_file: source_file,
-      source_file_absolute: source_file_absolute
+      source_file_absolute: source_file_absolute,
+      source_sha: compute_source_sha(source_file_absolute, start_line, end_line),
+      ast_sha: compute_ast_sha(clauses)
     }
 
     {function_key, function_info}

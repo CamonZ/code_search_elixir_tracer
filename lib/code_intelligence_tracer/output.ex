@@ -173,7 +173,9 @@ defmodule CodeIntelligenceTracer.Output do
       end_line: info.end_line,
       kind: to_string(info.kind),
       source_file: info.source_file,
-      source_file_absolute: info.source_file_absolute
+      source_file_absolute: info.source_file_absolute,
+      source_sha: info[:source_sha],
+      ast_sha: info[:ast_sha]
     }
   end
 

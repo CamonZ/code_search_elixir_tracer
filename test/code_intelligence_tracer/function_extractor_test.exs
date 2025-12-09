@@ -86,6 +86,23 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
       # Absolute path should be longer and contain the relative path
       assert String.length(func_info.source_file_absolute) > String.length(func_info.source_file)
     end
+
+    test "includes source_sha and ast_sha fields" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      {_name, func_info} = Enum.at(functions, 0)
+
+      # Should have source_sha (64-char hex string)
+      assert is_binary(func_info.source_sha)
+      assert func_info.source_sha =~ ~r/^[a-f0-9]{64}$/
+
+      # Should have ast_sha (64-char hex string)
+      assert is_binary(func_info.ast_sha)
+      assert func_info.ast_sha =~ ~r/^[a-f0-9]{64}$/
+    end
   end
 
   describe "extract_functions/2 with macros" do

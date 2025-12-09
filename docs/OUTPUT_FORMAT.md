@@ -99,11 +99,17 @@ Map of modules to their function definitions. Organized by module for efficient 
       "end_line": 25,
       "kind": "def",
       "source_file": "lib/my_app/module.ex",
-      "source_file_absolute": "/path/to/project/lib/my_app/module.ex"
+      "source_file_absolute": "/path/to/project/lib/my_app/module.ex",
+      "source_sha": "a1b2c3d4e5f6...",
+      "ast_sha": "f6e5d4c3b2a1..."
     }
   }
 }
 ```
+
+**SHA fields:**
+- `source_sha` - SHA256 hash of the source code from `start_line` to `end_line`. Detects any change to a function (formatting, comments, code). May be `null` if the source file is unavailable.
+- `ast_sha` - SHA256 hash of the normalized AST. Detects semantic changes only (ignores formatting, comments, line numbers).
 
 ### `specs`
 Map of modules to their `@spec` definitions.
@@ -224,14 +230,18 @@ A minimal example showing all sections:
         "end_line": 18,
         "kind": "def",
         "source_file": "lib/greeter.ex",
-        "source_file_absolute": "/home/user/my_app/lib/greeter.ex"
+        "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
+        "source_sha": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",
+        "ast_sha": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
       },
       "format_name/1": {
         "start_line": 20,
         "end_line": 22,
         "kind": "defp",
         "source_file": "lib/greeter.ex",
-        "source_file_absolute": "/home/user/my_app/lib/greeter.ex"
+        "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
+        "source_sha": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+        "ast_sha": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
       }
     }
   },
@@ -349,12 +359,16 @@ function_locations:
       kind: defp
       source_file: lib/greeter.ex
       source_file_absolute: /home/user/my_app/lib/greeter.ex
+      source_sha: fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321
+      ast_sha: abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
       start_line: 20
     greet/1:
       end_line: 18
       kind: def
       source_file: lib/greeter.ex
       source_file_absolute: /home/user/my_app/lib/greeter.ex
+      source_sha: a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890
+      ast_sha: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
       start_line: 12
 specs:
   MyApp.Greeter[1]:

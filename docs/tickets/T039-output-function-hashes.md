@@ -82,8 +82,8 @@ However, start with the simple implementation and optimize if profiling shows it
 
 ## Acceptance Criteria
 
-- [ ] `source_sha` field added to function info
-- [ ] `ast_sha` field added to function info
-- [ ] Both fields appear in JSON output
-- [ ] Both fields appear in TOON output
-- [ ] All existing tests pass
+- [x] `source_sha` field added to function info
+- [x] `ast_sha` field added to function info
+- [x] Both fields appear in JSON output
+- [x] Both fields appear in TOON output
+- [x] All existing tests pass
