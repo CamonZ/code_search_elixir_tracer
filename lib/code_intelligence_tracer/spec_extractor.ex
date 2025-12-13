@@ -1,4 +1,6 @@
 defmodule CodeIntelligenceTracer.SpecExtractor do
+  alias CodeIntelligenceTracer.StringFormatting
+
   @moduledoc """
   Extracts @spec and @callback definitions from BEAM file abstract_code chunks.
 
@@ -347,7 +349,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
     return_string = format_type_string(parsed.return)
 
     prefix = if kind == :callback, do: "@callback", else: "@spec"
-    inputs_joined = Enum.join(inputs_string, ", ")
+    inputs_joined = StringFormatting.join_map(inputs_string, ", ", &Function.identity/1)
     full = "#{prefix} #{name}(#{inputs_joined}) :: #{return_string}"
 
     %{
@@ -375,7 +377,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   """
   @spec format_type_string(type_ast()) :: String.t()
   def format_type_string(%{type: :builtin, name: name, args: args}) do
-    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    args_str = StringFormatting.join_map(args, ", ", &format_type_string/1)
     "#{name}(#{args_str})"
   end
 
@@ -400,7 +402,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   def format_type_string(%{type: :type_ref, module: nil, name: name, args: args}) do
-    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    args_str = StringFormatting.join_map(args, ", ", &format_type_string/1)
     "#{name}(#{args_str})"
   end
 
@@ -409,14 +411,12 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   def format_type_string(%{type: :type_ref, module: module, name: name, args: args}) do
-    args_str = Enum.map_join(args, ", ", &format_type_string/1)
+    args_str = StringFormatting.join_map(args, ", ", &format_type_string/1)
     "#{module}.#{name}(#{args_str})"
   end
 
   def format_type_string(%{type: :union, types: types}) do
-    types
-    |> Enum.map(&format_type_string/1)
-    |> Enum.join(" | ")
+    StringFormatting.join_map(types, " | ", &format_type_string/1)
   end
 
   def format_type_string(%{type: :tuple, elements: :any}) do
@@ -424,7 +424,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   def format_type_string(%{type: :tuple, elements: elements}) do
-    elements_str = Enum.map_join(elements, ", ", &format_type_string/1)
+    elements_str = StringFormatting.join_map(elements, ", ", &format_type_string/1)
     "{#{elements_str}}"
   end
 
@@ -441,11 +441,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   def format_type_string(%{type: :map, fields: fields}) do
-    fields_str =
-      fields
-      |> Enum.map(&format_map_field/1)
-      |> Enum.join(", ")
-
+    fields_str = StringFormatting.join_map(fields, ", ", &format_map_field/1)
     "%{#{fields_str}}"
   end
 
@@ -454,7 +450,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   def format_type_string(%{type: :fun, inputs: inputs, return: return}) do
-    inputs_str = Enum.map_join(inputs, ", ", &format_type_string/1)
+    inputs_str = StringFormatting.join_map(inputs, ", ", &format_type_string/1)
     return_str = format_type_string(return)
     "(#{inputs_str} -> #{return_str})"
   end

@@ -1,5 +1,6 @@
 defmodule CodeIntelligenceTracer.FunctionExtractor do
   alias CodeIntelligenceTracer.AstNormalizer
+  alias CodeIntelligenceTracer.StringFormatting
 
   @moduledoc """
   Extracts function definitions with their locations from Elixir debug info.
@@ -302,15 +303,17 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   # Extract guard expression from a single clause as string
   defp extract_guard([]), do: nil
-  defp extract_guard([single_guard]), do: guard_to_string(single_guard)
-  defp extract_guard(multiple_guards), do: multiple_guards |> Enum.map(&guard_to_string/1) |> Enum.join(" and ")
+  defp extract_guard(guards) do
+    StringFormatting.join_with_separator(guards, " and ", &guard_to_string/1)
+    |> case do
+      "" -> nil
+      result -> result
+    end
+  end
 
   # Convert function arguments to human-readable string
-  defp args_to_string([]), do: ""
   defp args_to_string(args) do
-    args
-    |> Enum.map(&arg_to_string/1)
-    |> Enum.join(", ")
+    StringFormatting.format_list(args, ", ", &arg_to_string/1, "")
   end
 
   # Convert a single argument AST to string
