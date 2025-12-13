@@ -27,4 +27,8 @@ defmodule TestSupport.GuardedFunctions do
   def pattern_with_guard({:ok, value}) when is_list(value), do: {:ok, length(value)}
   def pattern_with_guard({:ok, value}), do: {:ok, value}
   def pattern_with_guard({:error, _} = err), do: err
+
+  # Mixed guard with both and/or operators
+  def mixed_guard(x) when (is_integer(x) or is_float(x)) and x > 0, do: "positive number"
+  def mixed_guard(_), do: "other"
 end

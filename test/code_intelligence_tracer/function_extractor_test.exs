@@ -251,6 +251,31 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
       assert clause3.guard == nil
       assert clause3.pattern =~ "{:error, _}"
     end
+
+    test "extracts guards with mixed and/or operators" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # mixed_guard/1 has 2 clauses
+      mixed_guard_entries = functions
+        |> Enum.filter(fn {key, _} -> String.starts_with?(key, "mixed_guard/1:") end)
+        |> Enum.sort_by(fn {_, info} -> info.line end)
+
+      assert length(mixed_guard_entries) == 2
+
+      [{_, clause1}, {_, clause2}] = mixed_guard_entries
+
+      # Verify both operators are present and in correct form
+      assert clause1.guard =~ "is_integer(x)"
+      assert clause1.guard =~ "is_float(x)"
+      assert clause1.guard =~ "x > 0"
+      # Verify it contains 'or' operator (mixed with 'and')
+      assert clause1.guard =~ "or"
+      assert clause1.guard =~ "and"
+      assert clause2.guard == nil
+    end
   end
 
   describe "extract_functions/2 with macros" do
