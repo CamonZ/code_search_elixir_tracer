@@ -8,6 +8,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   - Extracting calls, function locations, specs, types, and structs
   """
 
+  alias CodeIntelligenceTracer.AppSelector
   alias CodeIntelligenceTracer.BeamReader
   alias CodeIntelligenceTracer.BuildDiscovery
   alias CodeIntelligenceTracer.CallExtractor
@@ -121,7 +122,7 @@ defmodule CodeIntelligenceTracer.Extractor do
       apps = BuildDiscovery.list_app_directories(build_lib_path)
       project_type = BuildDiscovery.detect_project_type(options.path)
 
-      apps_to_process = select_apps_to_process(apps, project_apps, options)
+      apps_to_process = AppSelector.select_apps_to_process(apps, project_apps, options)
 
       beam_files =
         apps_to_process
@@ -168,29 +169,6 @@ defmodule CodeIntelligenceTracer.Extractor do
       )
 
     {:ok, result}
-  end
-
-  # Select which apps to process based on options
-  defp select_apps_to_process(all_apps, project_apps, options) do
-    cond do
-      options.include_deps ->
-        all_apps
-
-      options.deps != [] ->
-        project_apps_set = MapSet.new(project_apps)
-        deps_set = MapSet.new(options.deps)
-
-        Enum.filter(all_apps, fn {app_name, _path} ->
-          MapSet.member?(project_apps_set, app_name) or MapSet.member?(deps_set, app_name)
-        end)
-
-      true ->
-        project_apps_set = MapSet.new(project_apps)
-
-        Enum.filter(all_apps, fn {app_name, _path} ->
-          MapSet.member?(project_apps_set, app_name)
-        end)
-    end
   end
 
   # Process BEAM files in parallel and merge results
