@@ -1,4 +1,6 @@
 defmodule CodeIntelligenceTracer.FunctionExtractor do
+  alias CodeIntelligenceTracer.AstNormalizer
+
   @moduledoc """
   Extracts function definitions with their locations from Elixir debug info.
 
@@ -314,75 +316,17 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   # Convert a single argument AST to string
   defp arg_to_string(arg) do
     arg
-    |> normalize_arg_ast()
+    |> AstNormalizer.strip_metadata()
     |> Macro.to_string()
   end
-
-  # Normalize argument AST for readable output
-  # Simplifies variable references and pattern matching
-  defp normalize_arg_ast({:=, _meta, [left, right]}) do
-    # Pattern match assignment: `{:ok, value} = result` -> show as `{:ok, value} = result`
-    {:=, [], [normalize_arg_ast(left), normalize_arg_ast(right)]}
-  end
-
-  defp normalize_arg_ast({name, _meta, context}) when is_atom(name) and is_atom(context) do
-    # Simple variable reference
-    {name, [], context}
-  end
-
-  defp normalize_arg_ast({form, _meta, args}) when is_list(args) do
-    {form, [], Enum.map(args, &normalize_arg_ast/1)}
-  end
-
-  defp normalize_arg_ast({left, right}) do
-    {normalize_arg_ast(left), normalize_arg_ast(right)}
-  end
-
-  defp normalize_arg_ast(list) when is_list(list) do
-    Enum.map(list, &normalize_arg_ast/1)
-  end
-
-  defp normalize_arg_ast(other), do: other
 
   # Convert a guard AST to a human-readable string
   # Guards in debug info use Erlang form like {:., [], [:erlang, :is_binary]}
   defp guard_to_string(guard_ast) do
     guard_ast
-    |> normalize_guard_ast()
+    |> AstNormalizer.normalize_guard_ast()
     |> Macro.to_string()
   end
-
-  # Convert Erlang-style guard calls to Elixir-style for readable output
-  # NOTE: Specific patterns for andalso/orelse must come before the general :erlang pattern
-  defp normalize_guard_ast({{:., _meta, [:erlang, :andalso]}, call_meta, [left, right]}) do
-    # Convert :erlang.andalso to `and`
-    {:and, call_meta, [normalize_guard_ast(left), normalize_guard_ast(right)]}
-  end
-
-  defp normalize_guard_ast({{:., _meta, [:erlang, :orelse]}, call_meta, [left, right]}) do
-    # Convert :erlang.orelse to `or`
-    {:or, call_meta, [normalize_guard_ast(left), normalize_guard_ast(right)]}
-  end
-
-  defp normalize_guard_ast({{:., _meta, [:erlang, func]}, call_meta, args}) do
-    # Convert :erlang.is_binary(x) to is_binary(x)
-    normalized_args = Enum.map(args, &normalize_guard_ast/1)
-    {func, call_meta, normalized_args}
-  end
-
-  defp normalize_guard_ast({form, meta, args}) when is_list(args) do
-    {form, meta, Enum.map(args, &normalize_guard_ast/1)}
-  end
-
-  defp normalize_guard_ast({left, right}) do
-    {normalize_guard_ast(left), normalize_guard_ast(right)}
-  end
-
-  defp normalize_guard_ast(list) when is_list(list) do
-    Enum.map(list, &normalize_guard_ast/1)
-  end
-
-  defp normalize_guard_ast(other), do: other
 
   # Walk the AST to find the maximum line number
   defp find_max_line(ast) do
