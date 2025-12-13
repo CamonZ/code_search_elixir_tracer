@@ -1,4 +1,4 @@
-defmodule ExAst.ComplexityAnalyzer do
+defmodule ExAst.Extractor.FunctionExtractor.ComplexityAnalyzer do
   @moduledoc """
   Analyze function complexity metrics.
 
@@ -62,7 +62,8 @@ defmodule ExAst.ComplexityAnalyzer do
     node_depth = if introduces_nesting?(ast), do: current_depth + 1, else: current_depth
 
     # Get children and calculate their max depths
-    children_max = get_ast_children(ast)
+    children_max =
+      get_ast_children(ast)
       |> Enum.map(&calculate_max_nesting_depth(&1, node_depth))
       |> Enum.max(fn -> node_depth end)
 
@@ -123,33 +124,37 @@ defmodule ExAst.ComplexityAnalyzer do
 
   defp complexity_of({:with, _meta, args}) when is_list(args) do
     # Count <- clauses (match operations)
-    match_clauses = Enum.count(args, fn
-      {:<-, _, _} -> true
-      _ -> false
-    end)
+    match_clauses =
+      Enum.count(args, fn
+        {:<-, _, _} -> true
+        _ -> false
+      end)
 
     # Count else clauses if present
-    else_clauses = case List.last(args) do
-      [do: _, else: else_block] when is_list(else_block) -> length(else_block)
-      [else: else_block] when is_list(else_block) -> length(else_block)
-      _ -> 0
-    end
+    else_clauses =
+      case List.last(args) do
+        [do: _, else: else_block] when is_list(else_block) -> length(else_block)
+        [else: else_block] when is_list(else_block) -> length(else_block)
+        _ -> 0
+      end
 
     match_clauses + else_clauses
   end
 
   defp complexity_of({:try, _meta, [block_opts]}) when is_list(block_opts) do
-    rescue_count = case Keyword.get(block_opts, :rescue) do
-      nil -> 0
-      clauses when is_list(clauses) -> length(clauses)
-      _ -> 0
-    end
+    rescue_count =
+      case Keyword.get(block_opts, :rescue) do
+        nil -> 0
+        clauses when is_list(clauses) -> length(clauses)
+        _ -> 0
+      end
 
-    catch_count = case Keyword.get(block_opts, :catch) do
-      nil -> 0
-      clauses when is_list(clauses) -> length(clauses)
-      _ -> 0
-    end
+    catch_count =
+      case Keyword.get(block_opts, :catch) do
+        nil -> 0
+        clauses when is_list(clauses) -> length(clauses)
+        _ -> 0
+      end
 
     rescue_count + catch_count
   end

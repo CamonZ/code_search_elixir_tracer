@@ -1,7 +1,7 @@
-defmodule ExAst.TypeAstTest do
+defmodule ExAst.Extractor.TypeAstTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.TypeAst
+  alias ExAst.Extractor.TypeAst
 
   describe "parse/1" do
     test "parses builtin types" do

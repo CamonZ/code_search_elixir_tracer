@@ -8,113 +8,113 @@ defmodule ExAst.StdlibModules do
 
   # Elixir standard library modules that are typically filtered out
   @stdlib_modules MapSet.new([
-    # Core data types and collections
-    "Enum",
-    "Map",
-    "List",
-    "Keyword",
-    "String",
-    "Integer",
-    "Float",
-    "Tuple",
-    "MapSet",
-    "Range",
-    "Stream",
-    "Bitwise",
-    "Binary",
+                    # Core data types and collections
+                    "Enum",
+                    "Map",
+                    "List",
+                    "Keyword",
+                    "String",
+                    "Integer",
+                    "Float",
+                    "Tuple",
+                    "MapSet",
+                    "Range",
+                    "Stream",
+                    "Bitwise",
+                    "Binary",
 
-    # IO and File operations
-    "File",
-    "IO",
-    "Path",
-    "StringIO",
+                    # IO and File operations
+                    "File",
+                    "IO",
+                    "Path",
+                    "StringIO",
 
-    # String/Data processing
-    "Regex",
-    "URI",
-    "Base",
-    "Inspect",
-    "Calendar",
-    "Version",
+                    # String/Data processing
+                    "Regex",
+                    "URI",
+                    "Base",
+                    "Inspect",
+                    "Calendar",
+                    "Version",
 
-    # Date/Time
-    "Date",
-    "DateTime",
-    "Time",
-    "NaiveDateTime",
-    "Calendar.ISO",
+                    # Date/Time
+                    "Date",
+                    "DateTime",
+                    "Time",
+                    "NaiveDateTime",
+                    "Calendar.ISO",
 
-    # Data access
-    "Access",
+                    # Data access
+                    "Access",
 
-    # Concurrency
-    "Agent",
-    "Task",
-    "Task.Supervisor",
-    "GenServer",
-    "Supervisor",
-    "DynamicSupervisor",
-    "Registry",
-    "Process",
-    "Node",
-    "Port",
+                    # Concurrency
+                    "Agent",
+                    "Task",
+                    "Task.Supervisor",
+                    "GenServer",
+                    "Supervisor",
+                    "DynamicSupervisor",
+                    "Registry",
+                    "Process",
+                    "Node",
+                    "Port",
 
-    # System/Runtime
-    "System",
-    "Code",
-    "Macro",
-    "Module",
-    "Application",
-    "Config",
-    "Config.Provider",
-    "Config.Reader",
+                    # System/Runtime
+                    "System",
+                    "Code",
+                    "Macro",
+                    "Module",
+                    "Application",
+                    "Config",
+                    "Config.Provider",
+                    "Config.Reader",
 
-    # Core language
-    "Kernel",
-    "Kernel.SpecialForms",
-    "Protocol",
-    "Exception",
-    "Function",
-    "Atom",
+                    # Core language
+                    "Kernel",
+                    "Kernel.SpecialForms",
+                    "Protocol",
+                    "Exception",
+                    "Function",
+                    "Atom",
 
-    # Protocols
-    "Collectable",
-    "Enumerable",
-    "Inspect",
-    "List.Chars",
-    "String.Chars",
+                    # Protocols
+                    "Collectable",
+                    "Enumerable",
+                    "Inspect",
+                    "List.Chars",
+                    "String.Chars",
 
-    # EEx templating
-    "EEx",
-    "EEx.Engine",
+                    # EEx templating
+                    "EEx",
+                    "EEx.Engine",
 
-    # Logging
-    "Logger",
-    "Logger.Formatter",
+                    # Logging
+                    "Logger",
+                    "Logger.Formatter",
 
-    # Mix (build tool)
-    "Mix",
-    "Mix.Config",
-    "Mix.Project",
-    "Mix.Task",
-    "Mix.Shell",
+                    # Mix (build tool)
+                    "Mix",
+                    "Mix.Config",
+                    "Mix.Project",
+                    "Mix.Task",
+                    "Mix.Shell",
 
-    # ExUnit (testing)
-    "ExUnit",
-    "ExUnit.Case",
-    "ExUnit.Assertions",
-    "ExUnit.Callbacks",
+                    # ExUnit (testing)
+                    "ExUnit",
+                    "ExUnit.Case",
+                    "ExUnit.Assertions",
+                    "ExUnit.Callbacks",
 
-    # IEx (interactive shell)
-    "IEx",
-    "IEx.Helpers",
+                    # IEx (interactive shell)
+                    "IEx",
+                    "IEx.Helpers",
 
-    # OptionParser
-    "OptionParser",
+                    # OptionParser
+                    "OptionParser",
 
-    # Struct
-    "Struct"
-  ])
+                    # Struct
+                    "Struct"
+                  ])
 
   @doc """
   Get the MapSet of all standard library modules.

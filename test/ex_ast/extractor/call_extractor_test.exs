@@ -1,18 +1,19 @@
-defmodule ExAst.CallExtractorTest do
+defmodule ExAst.Extractor.CallExtractorTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.CallExtractor
+  alias ExAst.Extractor.CallExtractor
   alias ExAst.BeamReader
 
   describe "extract_calls/3" do
     test "extracts remote call Enum.map(list, fun)" do
       # Create a simple definition that calls Enum.map
       definitions = [
-        {{:my_function, 1}, :def, [line: 1], [
-          {[line: 2], [{:list, [line: 2], nil}], [],
-           {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
-            [{:list, [line: 3], nil}, {:fun, [line: 3], nil}]}}
-        ]}
+        {{:my_function, 1}, :def, [line: 1],
+         [
+           {[line: 2], [{:list, [line: 2], nil}], [],
+            {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
+             [{:list, [line: 3], nil}, {:fun, [line: 3], nil}]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -33,10 +34,10 @@ defmodule ExAst.CallExtractorTest do
 
     test "extracts local call helper(x)" do
       definitions = [
-        {{:my_function, 1}, :def, [line: 1], [
-          {[line: 2], [{:x, [line: 2], nil}], [],
-           {:helper, [line: 3], [{:x, [line: 3], nil}]}}
-        ]}
+        {{:my_function, 1}, :def, [line: 1],
+         [
+           {[line: 2], [{:x, [line: 2], nil}], [], {:helper, [line: 3], [{:x, [line: 3], nil}]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -58,16 +59,17 @@ defmodule ExAst.CallExtractorTest do
 
     test "captures line numbers correctly" do
       definitions = [
-        {{:process, 0}, :def, [line: 10], [
-          {[line: 11], [], [],
-           {:__block__, [],
-            [
-              {{:., [line: 15], [{:__aliases__, [line: 15], [:IO]}, :puts]}, [line: 15],
-               ["hello"]},
-              {{:., [line: 20], [{:__aliases__, [line: 20], [:Enum]}, :each]}, [line: 20],
-               [{:list, [line: 20], nil}, {:fun, [line: 20], nil}]}
-            ]}}
-        ]}
+        {{:process, 0}, :def, [line: 10],
+         [
+           {[line: 11], [], [],
+            {:__block__, [],
+             [
+               {{:., [line: 15], [{:__aliases__, [line: 15], [:IO]}, :puts]}, [line: 15],
+                ["hello"]},
+               {{:., [line: 20], [{:__aliases__, [line: 20], [:Enum]}, :each]}, [line: 20],
+                [{:list, [line: 20], nil}, {:fun, [line: 20], nil}]}
+             ]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -79,15 +81,16 @@ defmodule ExAst.CallExtractorTest do
     test "handles nested calls" do
       # Nested call: Enum.map(Enum.filter(list, pred), fun)
       definitions = [
-        {{:nested, 1}, :def, [line: 1], [
-          {[line: 2], [{:list, [line: 2], nil}], [],
-           {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
-            [
-              {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :filter]}, [line: 3],
-               [{:list, [line: 3], nil}, {:pred, [line: 3], nil}]},
-              {:fun, [line: 3], nil}
-            ]}}
-        ]}
+        {{:nested, 1}, :def, [line: 1],
+         [
+           {[line: 2], [{:list, [line: 2], nil}], [],
+            {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
+             [
+               {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :filter]}, [line: 3],
+                [{:list, [line: 3], nil}, {:pred, [line: 3], nil}]},
+               {:fun, [line: 3], nil}
+             ]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -137,10 +140,11 @@ defmodule ExAst.CallExtractorTest do
 
     test "handles Erlang module calls (:erlang_module.function)" do
       definitions = [
-        {{:get_info, 0}, :def, [line: 1], [
-          {[line: 2], [], [],
-           {{:., [line: 3], [:erlang, :system_info]}, [line: 3], [:otp_release]}}
-        ]}
+        {{:get_info, 0}, :def, [line: 1],
+         [
+           {[line: 2], [], [],
+            {{:., [line: 3], [:erlang, :system_info]}, [line: 3], [:otp_release]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.System, "lib/my_app/system.ex")
@@ -158,18 +162,19 @@ defmodule ExAst.CallExtractorTest do
     test "excludes special forms from local calls" do
       # Block with special forms that shouldn't be counted as calls
       definitions = [
-        {{:my_func, 0}, :def, [line: 1], [
-          {[line: 2], [], [],
-           {:__block__, [],
-            [
-              {:=, [line: 3], [{:x, [line: 3], nil}, 1]},
-              {:case, [line: 4],
-               [
-                 {:x, [line: 4], nil},
-                 [do: [{:->, [line: 5], [[1], :one]}]]
-               ]}
-            ]}}
-        ]}
+        {{:my_func, 0}, :def, [line: 1],
+         [
+           {[line: 2], [], [],
+            {:__block__, [],
+             [
+               {:=, [line: 3], [{:x, [line: 3], nil}, 1]},
+               {:case, [line: 4],
+                [
+                  {:x, [line: 4], nil},
+                  [do: [{:->, [line: 5], [[1], :one]}]]
+                ]}
+             ]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -183,12 +188,11 @@ defmodule ExAst.CallExtractorTest do
 
     test "handles multiple clauses in function" do
       definitions = [
-        {{:multi_clause, 1}, :def, [line: 1], [
-          {[line: 2], [1], [],
-           {:first_helper, [line: 3], []}},
-          {[line: 5], [2], [],
-           {:second_helper, [line: 6], []}}
-        ]}
+        {{:multi_clause, 1}, :def, [line: 1],
+         [
+           {[line: 2], [1], [], {:first_helper, [line: 3], []}},
+           {[line: 5], [2], [], {:second_helper, [line: 6], []}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -205,14 +209,14 @@ defmodule ExAst.CallExtractorTest do
 
     test "extracts calls from private functions with correct kind" do
       definitions = [
-        {{:public_func, 0}, :def, [line: 1], [
-          {[line: 2], [], [],
-           {:public_helper, [line: 3], []}}
-        ]},
-        {{:private_func, 0}, :defp, [line: 5], [
-          {[line: 6], [], [],
-           {:private_helper, [line: 7], []}}
-        ]}
+        {{:public_func, 0}, :def, [line: 1],
+         [
+           {[line: 2], [], [], {:public_helper, [line: 3], []}}
+         ]},
+        {{:private_func, 0}, :defp, [line: 5],
+         [
+           {[line: 6], [], [], {:private_helper, [line: 7], []}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -228,15 +232,16 @@ defmodule ExAst.CallExtractorTest do
 
     test "extracts calls from macros with correct kind" do
       definitions = [
-        {{:my_macro, 1}, :defmacro, [line: 1], [
-          {[line: 2], [{:arg, [line: 2], nil}], [],
-           {{:., [line: 3], [{:__aliases__, [line: 3], [:Macro]}, :expand]}, [line: 3],
-            [{:arg, [line: 3], nil}, {:__ENV__, [line: 3], nil}]}}
-        ]},
-        {{:private_macro, 0}, :defmacrop, [line: 5], [
-          {[line: 6], [], [],
-           {:do_something, [line: 7], []}}
-        ]}
+        {{:my_macro, 1}, :defmacro, [line: 1],
+         [
+           {[line: 2], [{:arg, [line: 2], nil}], [],
+            {{:., [line: 3], [{:__aliases__, [line: 3], [:Macro]}, :expand]}, [line: 3],
+             [{:arg, [line: 3], nil}, {:__ENV__, [line: 3], nil}]}}
+         ]},
+        {{:private_macro, 0}, :defmacrop, [line: 5],
+         [
+           {[line: 6], [], [], {:do_something, [line: 7], []}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Macros, "lib/my_app/macros.ex")
@@ -252,13 +257,19 @@ defmodule ExAst.CallExtractorTest do
       # AST for: &String.upcase/1
       # {:&, [line: 3], [{:/, [line: 3], [{{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :upcase]}, [no_parens: true, line: 3], []}, 1]}]}
       definitions = [
-        {{:my_function, 1}, :def, [line: 1], [
-          {[line: 2], [{:list, [line: 2], nil}], [],
-           {:&, [line: 3],
-            [{:/, [line: 3],
-              [{{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :upcase]},
-                [no_parens: true, line: 3], []}, 1]}]}}
-        ]}
+        {{:my_function, 1}, :def, [line: 1],
+         [
+           {[line: 2], [{:list, [line: 2], nil}], [],
+            {:&, [line: 3],
+             [
+               {:/, [line: 3],
+                [
+                  {{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :upcase]},
+                   [no_parens: true, line: 3], []},
+                  1
+                ]}
+             ]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -278,11 +289,10 @@ defmodule ExAst.CallExtractorTest do
       # AST for: &helper/2
       # {:&, [line: 3], [{:/, [line: 3], [{:helper, [line: 3], nil}, 2]}]}
       definitions = [
-        {{:my_function, 0}, :def, [line: 1], [
-          {[line: 2], [], [],
-           {:&, [line: 3],
-            [{:/, [line: 3], [{:helper, [line: 3], nil}, 2]}]}}
-        ]}
+        {{:my_function, 0}, :def, [line: 1],
+         [
+           {[line: 2], [], [], {:&, [line: 3], [{:/, [line: 3], [{:helper, [line: 3], nil}, 2]}]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
@@ -301,15 +311,23 @@ defmodule ExAst.CallExtractorTest do
     test "extracts function capture passed to Enum.map" do
       # AST for: Enum.map(list, &String.downcase/1)
       definitions = [
-        {{:process, 1}, :def, [line: 1], [
-          {[line: 2], [{:list, [line: 2], nil}], [],
-           {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
-            [{:list, [line: 3], nil},
-             {:&, [line: 3],
-              [{:/, [line: 3],
-                [{{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :downcase]},
-                  [no_parens: true, line: 3], []}, 1]}]}]}}
-        ]}
+        {{:process, 1}, :def, [line: 1],
+         [
+           {[line: 2], [{:list, [line: 2], nil}], [],
+            {{:., [line: 3], [{:__aliases__, [line: 3], [:Enum]}, :map]}, [line: 3],
+             [
+               {:list, [line: 3], nil},
+               {:&, [line: 3],
+                [
+                  {:/, [line: 3],
+                   [
+                     {{:., [line: 3], [{:__aliases__, [line: 3], [:String]}, :downcase]},
+                      [no_parens: true, line: 3], []},
+                     1
+                   ]}
+                ]}
+             ]}}
+         ]}
       ]
 
       calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")

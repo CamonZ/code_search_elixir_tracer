@@ -1,8 +1,8 @@
-defmodule ExAst.FunctionExtractor do
-  alias ExAst.AstNormalizer
-  alias ExAst.ComplexityAnalyzer
-  alias ExAst.StringFormatting
+defmodule ExAst.Extractor.FunctionExtractor do
+  alias ExAst.Extractor.FunctionExtractor.AstNormalizer
+  alias ExAst.Extractor.FunctionExtractor.ComplexityAnalyzer
   alias ExAst.Utils
+  alias ExAst.Utils.StringFormatting
 
   @moduledoc """
   Extracts function definitions with their locations from Elixir debug info.
@@ -151,7 +151,11 @@ defmodule ExAst.FunctionExtractor do
 
   # Extract info for each clause in a function definition
   @spec extract_clause_infos(tuple(), String.t(), String.t()) :: [{String.t(), clause_info()}]
-  defp extract_clause_infos({{func_name, arity}, kind, def_meta, clauses}, source_file, source_file_absolute) do
+  defp extract_clause_infos(
+         {{func_name, arity}, kind, def_meta, clauses},
+         source_file,
+         source_file_absolute
+       ) do
     # Detect macro-generated functions via :context in definition metadata
     generated_by = Keyword.get(def_meta, :context)
     # Extract macro source location from :file tuple (present for generated functions)
@@ -204,7 +208,8 @@ defmodule ExAst.FunctionExtractor do
   end
 
   # Format the macro source location as "relative/path.ex:line" or nil
-  @spec format_macro_source({String.t() | [integer()], non_neg_integer()} | nil) :: String.t() | nil
+  @spec format_macro_source({String.t() | [integer()], non_neg_integer()} | nil) ::
+          String.t() | nil
   defp format_macro_source(nil), do: nil
 
   defp format_macro_source({path, line}) when is_binary(path) and is_integer(line) do
@@ -221,6 +226,7 @@ defmodule ExAst.FunctionExtractor do
   # Extract guard expression from a single clause as string
   @spec extract_guard([term()]) :: String.t() | nil
   defp extract_guard([]), do: nil
+
   defp extract_guard(guards) do
     StringFormatting.join_with_separator(guards, " and ", &guard_to_string/1)
     |> case do

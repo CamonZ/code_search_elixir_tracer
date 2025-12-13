@@ -1,8 +1,8 @@
-defmodule ExAst.FunctionExtractorTest do
+defmodule ExAst.Extractor.FunctionExtractorTest do
   use ExUnit.Case, async: true
 
   alias ExAst.BeamReader
-  alias ExAst.FunctionExtractor
+  alias ExAst.Extractor.FunctionExtractor
   import ExAst.TestHelpers
 
   describe "extract_functions/2" do
@@ -13,7 +13,9 @@ defmodule ExAst.FunctionExtractorTest do
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # read_chunks is a public function - find it by prefix since key includes line number
-      read_chunks_entries = Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
+      read_chunks_entries =
+        Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
+
       assert length(read_chunks_entries) >= 1
 
       {_key, func_info} = hd(read_chunks_entries)
@@ -43,13 +45,17 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "handles multi-clause functions as separate entries" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # multi_guard/1 has 3 clauses, should produce 3 entries
-      multi_guard_entries = Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "multi_guard/1:") end)
+      multi_guard_entries =
+        Enum.filter(functions, fn {key, _} -> String.starts_with?(key, "multi_guard/1:") end)
+
       assert length(multi_guard_entries) == 3
 
       # Each entry should have a different line
@@ -115,7 +121,8 @@ defmodule ExAst.FunctionExtractorTest do
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # Find read_chunks/1 entry
-      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
+      {_key, func_info} =
+        Enum.find(functions, fn {key, _} -> String.starts_with?(key, "read_chunks/1:") end)
 
       assert func_info.name == "read_chunks"
       assert func_info.arity == 1
@@ -137,39 +144,48 @@ defmodule ExAst.FunctionExtractorTest do
 
   describe "extract_functions/2 with guards" do
     test "extracts nil guard for functions without guards" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # Find no_guard/1 entry
-      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "no_guard/1:") end)
+      {_key, func_info} =
+        Enum.find(functions, fn {key, _} -> String.starts_with?(key, "no_guard/1:") end)
 
       assert func_info.guard == nil
       assert func_info.pattern == "x"
     end
 
     test "extracts single guard as string" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # Find single_guard/1 entry
-      {_key, func_info} = Enum.find(functions, fn {key, _} -> String.starts_with?(key, "single_guard/1:") end)
+      {_key, func_info} =
+        Enum.find(functions, fn {key, _} -> String.starts_with?(key, "single_guard/1:") end)
 
       assert func_info.guard == "is_binary(x)"
       assert func_info.pattern == "x"
     end
 
     test "extracts separate entries for multi-clause functions with guards" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # multi_guard/1 has 3 clauses
-      multi_guard_entries = functions
+      multi_guard_entries =
+        functions
         |> Enum.filter(fn {key, _} -> String.starts_with?(key, "multi_guard/1:") end)
         |> Enum.sort_by(fn {_, info} -> info.line end)
 
@@ -183,13 +199,16 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "extracts compound guards with and" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # compound_guard/1 has 3 clauses
-      compound_guard_entries = functions
+      compound_guard_entries =
+        functions
         |> Enum.filter(fn {key, _} -> String.starts_with?(key, "compound_guard/1:") end)
         |> Enum.sort_by(fn {_, info} -> info.line end)
 
@@ -205,13 +224,16 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "extracts guards with or" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # or_guard/1 has 2 clauses
-      or_guard_entries = functions
+      or_guard_entries =
+        functions
         |> Enum.filter(fn {key, _} -> String.starts_with?(key, "or_guard/1:") end)
         |> Enum.sort_by(fn {_, info} -> info.line end)
 
@@ -225,13 +247,16 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "extracts patterns from pattern matching clauses" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # pattern_with_guard/1 has 3 clauses with different patterns
-      pattern_entries = functions
+      pattern_entries =
+        functions
         |> Enum.filter(fn {key, _} -> String.starts_with?(key, "pattern_with_guard/1:") end)
         |> Enum.sort_by(fn {_, info} -> info.line end)
 
@@ -253,13 +278,16 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "extracts guards with mixed and/or operators" do
-      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+      {:ok, {module, chunks}} =
+        BeamReader.read_chunks(get_beam_path(TestSupport.GuardedFunctions))
+
       {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
 
       functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
 
       # mixed_guard/1 has 2 clauses
-      mixed_guard_entries = functions
+      mixed_guard_entries =
+        functions
         |> Enum.filter(fn {key, _} -> String.starts_with?(key, "mixed_guard/1:") end)
         |> Enum.sort_by(fn {_, info} -> info.line end)
 
@@ -288,7 +316,8 @@ defmodule ExAst.FunctionExtractorTest do
         {:ok, {module, chunks}} ->
           case BeamReader.extract_debug_info(chunks, module) do
             {:ok, debug_info} ->
-              functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file || "")
+              functions =
+                FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file || "")
 
               # Logger has macros like debug, info, warn, error
               macro_functions =
@@ -355,35 +384,40 @@ defmodule ExAst.FunctionExtractorTest do
   describe "compute_source_sha/3" do
     test "same source produces same SHA" do
       # Just test the function directly with fixed line numbers
-      sha1 = FunctionExtractor.compute_source_sha(
-        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
-        10,
-        20
-      )
+      sha1 =
+        FunctionExtractor.compute_source_sha(
+          Path.expand("lib/ex_ast/beam_reader.ex"),
+          10,
+          20
+        )
 
-      sha2 = FunctionExtractor.compute_source_sha(
-        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
-        10,
-        20
-      )
+      sha2 =
+        FunctionExtractor.compute_source_sha(
+          Path.expand("lib/ex_ast/beam_reader.ex"),
+          10,
+          20
+        )
 
       assert sha1 == sha2
       assert is_binary(sha1)
-      assert String.length(sha1) == 64  # SHA256 hex is 64 chars
+      # SHA256 hex is 64 chars
+      assert String.length(sha1) == 64
     end
 
     test "different line ranges produce different SHAs" do
-      sha1 = FunctionExtractor.compute_source_sha(
-        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
-        10,
-        20
-      )
+      sha1 =
+        FunctionExtractor.compute_source_sha(
+          Path.expand("lib/ex_ast/beam_reader.ex"),
+          10,
+          20
+        )
 
-      sha2 = FunctionExtractor.compute_source_sha(
-        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
-        30,
-        40
-      )
+      sha2 =
+        FunctionExtractor.compute_source_sha(
+          Path.expand("lib/ex_ast/beam_reader.ex"),
+          30,
+          40
+        )
 
       # Different line ranges should produce different SHAs
       assert sha1 != sha2
@@ -395,11 +429,12 @@ defmodule ExAst.FunctionExtractorTest do
     end
 
     test "returns valid hex string" do
-      sha = FunctionExtractor.compute_source_sha(
-        Path.expand("lib/code_intelligence_tracer/beam_reader.ex"),
-        10,
-        20
-      )
+      sha =
+        FunctionExtractor.compute_source_sha(
+          Path.expand("lib/ex_ast/beam_reader.ex"),
+          10,
+          20
+        )
 
       # Should be valid lowercase hex
       assert sha =~ ~r/^[a-f0-9]{64}$/

@@ -1,4 +1,4 @@
-defmodule ExAst.CallExtractor do
+defmodule ExAst.Extractor.CallExtractor do
   @moduledoc """
   Extracts function calls from Elixir AST definitions.
 
@@ -169,7 +169,11 @@ defmodule ExAst.CallExtractor do
   end
 
   @spec extract_calls_from_definition(tuple(), String.t(), String.t()) :: [map()]
-  defp extract_calls_from_definition({{func_name, arity}, kind, _meta, clauses}, module_string, source_file) do
+  defp extract_calls_from_definition(
+         {{func_name, arity}, kind, _meta, clauses},
+         module_string,
+         source_file
+       ) do
     function_string = "#{func_name}/#{arity}"
 
     clauses
@@ -189,28 +193,30 @@ defmodule ExAst.CallExtractor do
           {:skip, type, callee, line} ->
             # For function captures, we skip descending into children
             # to avoid double-counting the inner remote call
-            call_record = build_call_record(
-              type,
-              module_string,
-              function_string,
-              kind,
-              source_file,
-              line,
-              callee
-            )
+            call_record =
+              build_call_record(
+                type,
+                module_string,
+                function_string,
+                kind,
+                source_file,
+                line,
+                callee
+              )
 
             {:ok, [call_record | acc]}
 
           {type, callee, line} ->
-            call_record = build_call_record(
-              type,
-              module_string,
-              function_string,
-              kind,
-              source_file,
-              line,
-              callee
-            )
+            call_record =
+              build_call_record(
+                type,
+                module_string,
+                function_string,
+                kind,
+                source_file,
+                line,
+                callee
+              )
 
             {node, [call_record | acc]}
         end
@@ -313,52 +319,16 @@ defmodule ExAst.CallExtractor do
   defp extract_call(_node, _caller_module), do: nil
 
   # ============================================================================
-  # Guard Helper Functions
+  # Call Pattern Recognition
   # ============================================================================
 
-  # These helper functions provide reusable pattern matching checks for different
-  # call types. They improve code readability and documentation by making the intent
-  # of each guard condition explicit. Though not currently used inline in pattern
-  # matching, they serve as documentation for the call patterns and can be used
-  # if the extract_call implementation is refactored to use cond blocks.
-
-  @dialyzer :no_unused
-  @doc false
-  @spec remote_function_capture?(node :: tuple()) :: boolean()
-  defp remote_function_capture?(
-    {:&, _, [{:/, _, [{{:., _, [_module, func]}, _, _args}, arity]}]}
-  ) when is_atom(func) and is_integer(arity),
-  do: true
-
-  defp remote_function_capture?(_), do: false
-
-  @doc false
-  @spec local_function_capture?(node :: tuple()) :: boolean()
-  defp local_function_capture?(
-    {:&, _, [{:/, _, [{func, _, context}, arity]}]}
-  ) when is_atom(func) and is_integer(arity) and is_atom(context),
-  do: true
-
-  defp local_function_capture?(_), do: false
-
-  @doc false
-  @spec remote_call?(node :: tuple()) :: boolean()
-  defp remote_call?({{:., _, [_module, func]}, _meta, _args}) when is_atom(func),
-    do: true
-
-  defp remote_call?(_), do: false
-
-  @doc false
-  @spec local_call?(node :: tuple()) :: boolean()
-  defp local_call?({func, _meta, args}) when is_atom(func) and is_list(args),
-    do: true
-
-  defp local_call?(_), do: false
-
-  @doc false
-  @spec variable_reference?(node :: tuple()) :: boolean()
-  defp variable_reference?({_name, _meta, nil}), do: true
-  defp variable_reference?(_), do: false
+  # The extract_call/2 function recognizes these call patterns:
+  #
+  # Remote function capture: {:&, _, [{:/, _, [{{:., _, [module, func]}, _, _args}, arity]}]}
+  # Local function capture:  {:&, _, [{:/, _, [{func, _, context}, arity]}]}
+  # Remote call:             {{:., _, [module, func]}, meta, args}
+  # Local call:              {func, meta, args} where is_atom(func) and is_list(args)
+  # Variable reference:      {_name, _meta, nil}
 
   # Normalize module reference to string
   @spec normalize_module(term()) :: {:ok, String.t()} | :error
@@ -382,7 +352,15 @@ defmodule ExAst.CallExtractor do
     func not in @special_forms
   end
 
-  @spec build_call_record(atom(), String.t(), String.t(), atom(), String.t(), non_neg_integer(), map()) :: map()
+  @spec build_call_record(
+          atom(),
+          String.t(),
+          String.t(),
+          atom(),
+          String.t(),
+          non_neg_integer(),
+          map()
+        ) :: map()
   defp build_call_record(type, module_string, function_string, kind, source_file, line, callee) do
     %{
       type: type,

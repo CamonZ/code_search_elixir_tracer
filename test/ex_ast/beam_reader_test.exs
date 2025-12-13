@@ -201,7 +201,9 @@ defmodule ExAst.BeamReaderTest do
       {:ok, build_lib_path} =
         ExAst.BuildDiscovery.find_build_dir(project_path, "dev")
 
-      app_dirs = [{"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}]
+      app_dirs = [
+        {"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}
+      ]
 
       modules = BeamReader.collect_modules_from_apps(app_dirs)
 
@@ -233,5 +235,4 @@ defmodule ExAst.BeamReaderTest do
       assert modules == MapSet.new()
     end
   end
-
 end

@@ -1,7 +1,7 @@
-defmodule ExAst.SpecExtractorTest do
+defmodule ExAst.Extractor.SpecExtractorTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.SpecExtractor
+  alias ExAst.Extractor.SpecExtractor
 
   # =============================================================================
   # T021: correlate_specs/2 tests
@@ -197,7 +197,7 @@ defmodule ExAst.SpecExtractorTest do
       # Extract functions and specs
       functions =
         debug_info.definitions
-        |> ExAst.FunctionExtractor.extract_functions("")
+        |> ExAst.Extractor.FunctionExtractor.extract_functions("")
 
       specs = SpecExtractor.extract_specs(chunks)
 
@@ -210,9 +210,19 @@ defmodule ExAst.SpecExtractorTest do
       assert new_0.spec.full == "@spec new() :: t()"
 
       # record_success/6 should have spec (default args mean function has arities 3,4,5,6 but spec is arity 6)
-      {_key, record_success_6} = Enum.find(result, fn {key, _} -> String.starts_with?(key, "record_success/6:") end)
+      {_key, record_success_6} =
+        Enum.find(result, fn {key, _} -> String.starts_with?(key, "record_success/6:") end)
+
       assert record_success_6.spec != nil
-      assert record_success_6.spec.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+
+      assert record_success_6.spec.inputs_string == [
+               "t()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()"
+             ]
     end
   end
 
@@ -270,12 +280,9 @@ defmodule ExAst.SpecExtractorTest do
             {:result,
              {:type, {15, 30}, :union,
               [
-                {:type, {15, 30}, :tuple,
-                 [{:atom, 0, :ok}, {:var, {15, 36}, :a}]},
-                {:type, {15, 45}, :tuple,
-                 [{:atom, 0, :error}, {:var, {15, 55}, :b}]}
-              ]},
-             [{:var, {15, 20}, :a}, {:var, {15, 23}, :b}]}}
+                {:type, {15, 30}, :tuple, [{:atom, 0, :ok}, {:var, {15, 36}, :a}]},
+                {:type, {15, 45}, :tuple, [{:atom, 0, :error}, {:var, {15, 55}, :b}]}
+              ]}, [{:var, {15, 20}, :a}, {:var, {15, 23}, :b}]}}
          ]}
 
       chunks = %{abstract_code: abstract_code}

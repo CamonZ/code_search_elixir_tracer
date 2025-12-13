@@ -1,7 +1,7 @@
-defmodule ExAst.SpecFormatter do
-  alias ExAst.StringFormatting
-  alias ExAst.SpecParser
-  alias ExAst.TypeAst
+defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
+  alias ExAst.Extractor.SpecExtractor.SpecParser
+  alias ExAst.Extractor.TypeAst
+  alias ExAst.Utils.StringFormatting
 
   @moduledoc """
   Format parsed spec clauses into human-readable strings.

@@ -1,4 +1,4 @@
-defmodule ExAst.StructExtractor do
+defmodule ExAst.Extractor.StructExtractor do
   @moduledoc """
   Extracts struct definitions from BEAM file debug info.
 

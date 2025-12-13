@@ -1,6 +1,6 @@
-defmodule ExAst.TypeAst do
-  alias ExAst.StringFormatting
+defmodule ExAst.Extractor.TypeAst do
   alias ExAst.Utils
+  alias ExAst.Utils.StringFormatting
 
   @moduledoc """
   Parse and format Elixir type AST nodes.

@@ -1,5 +1,5 @@
-defmodule ExAst.TypeDefinitionExtractor do
-  alias ExAst.TypeAst
+defmodule ExAst.Extractor.SpecExtractor.TypeDefinitionExtractor do
+  alias ExAst.Extractor.TypeAst
 
   @moduledoc """
   Extracts @type and @opaque definitions from BEAM file abstract_code chunks.

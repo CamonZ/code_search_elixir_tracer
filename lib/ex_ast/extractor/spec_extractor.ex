@@ -1,8 +1,8 @@
-defmodule ExAst.SpecExtractor do
-  alias ExAst.SpecFormatter
-  alias ExAst.SpecParser
-  alias ExAst.TypeAst
-  alias ExAst.TypeDefinitionExtractor
+defmodule ExAst.Extractor.SpecExtractor do
+  alias ExAst.Extractor.SpecExtractor.SpecFormatter
+  alias ExAst.Extractor.SpecExtractor.SpecParser
+  alias ExAst.Extractor.SpecExtractor.TypeDefinitionExtractor
+  alias ExAst.Extractor.TypeAst
 
   @moduledoc """
   Extract and format specs and callbacks from BEAM file abstract_code chunks.

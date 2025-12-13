@@ -1,7 +1,7 @@
-defmodule ExAst.StructExtractorTest do
+defmodule ExAst.Extractor.StructExtractorTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.StructExtractor
+  alias ExAst.Extractor.StructExtractor
 
   describe "extract_struct/1" do
     test "extracts struct with fields" do

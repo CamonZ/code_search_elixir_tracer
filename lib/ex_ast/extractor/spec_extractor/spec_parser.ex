@@ -1,5 +1,5 @@
-defmodule ExAst.SpecParser do
-  alias ExAst.TypeAst
+defmodule ExAst.Extractor.SpecExtractor.SpecParser do
+  alias ExAst.Extractor.TypeAst
 
   @moduledoc """
   Parse @spec and @callback definitions from BEAM bytecode.

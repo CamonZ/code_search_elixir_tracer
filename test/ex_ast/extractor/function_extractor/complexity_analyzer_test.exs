@@ -1,7 +1,7 @@
-defmodule ExAst.ComplexityAnalyzerTest do
+defmodule ExAst.Extractor.FunctionExtractor.ComplexityAnalyzerTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.ComplexityAnalyzer
+  alias ExAst.Extractor.FunctionExtractor.ComplexityAnalyzer
 
   describe "compute_complexity/1" do
     test "simple expression has complexity 1" do
@@ -21,86 +21,97 @@ defmodule ExAst.ComplexityAnalyzerTest do
 
     test "case adds n-1 for n clauses" do
       # 3 clauses = +2
-      ast = quote do
-        case x do
-          :a -> 1
-          :b -> 2
-          _ -> 3
+      ast =
+        quote do
+          case x do
+            :a -> 1
+            :b -> 2
+            _ -> 3
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "cond adds n-1 for n clauses" do
       # 3 clauses = +2
-      ast = quote do
-        cond do
-          x > 0 -> :pos
-          x < 0 -> :neg
-          true -> :zero
+      ast =
+        quote do
+          cond do
+            x > 0 -> :pos
+            x < 0 -> :neg
+            true -> :zero
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "nested control structures add up" do
       # case(2 clauses = +1) + if(+1) = 3
-      ast = quote do
-        case x do
-          :a -> if(y, do: 1, else: 2)
-          :b -> 3
+      ast =
+        quote do
+          case x do
+            :a -> if(y, do: 1, else: 2)
+            :b -> 3
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "with adds 1 per match clause" do
       # 2 <- clauses = +2
-      ast = quote do
-        with {:ok, a} <- foo(),
-             {:ok, b} <- bar(a) do
-          {:ok, a + b}
+      ast =
+        quote do
+          with {:ok, a} <- foo(),
+               {:ok, b} <- bar(a) do
+            {:ok, a + b}
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "with else clauses add to complexity" do
       # 2 <- clauses + 1 else clause = +3
-      ast = quote do
-        with {:ok, a} <- foo(),
-             {:ok, b} <- bar(a) do
-          {:ok, a + b}
-        else
-          {:error, _} -> :error
+      ast =
+        quote do
+          with {:ok, a} <- foo(),
+               {:ok, b} <- bar(a) do
+            {:ok, a + b}
+          else
+            {:error, _} -> :error
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 4
     end
 
     test "boolean operators add 1 each" do
       # && and || each add 1
-      ast = quote do: x && y || z
+      ast = quote do: (x && y) || z
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "and/or operators add 1 each" do
-      ast = quote do: x and y or z
+      ast = quote do: (x and y) or z
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "try/rescue adds per rescue clause" do
       # 2 rescue clauses = +2
-      ast = quote do
-        try do
-          risky()
-        rescue
-          ArgumentError -> :arg_error
-          RuntimeError -> :runtime_error
+      ast =
+        quote do
+          try do
+            risky()
+          rescue
+            ArgumentError -> :arg_error
+            RuntimeError -> :runtime_error
+          end
         end
-      end
+
       assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
   end
-
 end

@@ -180,5 +180,4 @@ defmodule ExAst.BeamReader do
         end
     end
   end
-
 end

@@ -1,4 +1,4 @@
-defmodule ExAst.StringFormatting do
+defmodule ExAst.Utils.StringFormatting do
   @moduledoc """
   Utilities for consistent string formatting and composition.
 
@@ -47,6 +47,7 @@ defmodule ExAst.StringFormatting do
   """
   @spec join_map_or(list(), String.t(), (term() -> String.t()), String.t()) :: String.t()
   def join_map_or([], _separator, _formatter, default), do: default
+
   def join_map_or(items, separator, formatter, _default) do
     join_map(items, separator, formatter)
   end
@@ -71,6 +72,7 @@ defmodule ExAst.StringFormatting do
   @spec join_with_separator(list(), String.t(), (term() -> String.t())) :: String.t()
   def join_with_separator([], _separator, _formatter), do: ""
   def join_with_separator([single], _separator, formatter), do: formatter.(single)
+
   def join_with_separator(items, separator, formatter) do
     join_map(items, separator, formatter)
   end
@@ -133,8 +135,8 @@ defmodule ExAst.StringFormatting do
   """
   @spec format_list(list(), String.t(), (term() -> String.t()), String.t()) :: String.t()
   def format_list([], _separator, _formatter, empty_default), do: empty_default
+
   def format_list(items, separator, formatter, _empty_default) do
     join_map(items, separator, formatter)
   end
-
 end

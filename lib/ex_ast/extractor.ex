@@ -11,12 +11,12 @@ defmodule ExAst.Extractor do
   alias ExAst.AppSelector
   alias ExAst.BeamReader
   alias ExAst.BuildDiscovery
-  alias ExAst.CallExtractor
+  alias ExAst.Extractor.CallExtractor
   alias ExAst.CallFilter
   alias ExAst.Extractor.Stats
-  alias ExAst.FunctionExtractor
-  alias ExAst.SpecExtractor
-  alias ExAst.StructExtractor
+  alias ExAst.Extractor.FunctionExtractor
+  alias ExAst.Extractor.SpecExtractor
+  alias ExAst.Extractor.StructExtractor
   alias ExAst.Utils
 
   defstruct [
@@ -175,7 +175,8 @@ defmodule ExAst.Extractor do
   end
 
   # Process BEAM files in parallel and merge results
-  @spec process_beam_files([String.t()], MapSet.t()) :: {[map()], map(), map(), map(), map(), map()}
+  @spec process_beam_files([String.t()], MapSet.t()) ::
+          {[map()], map(), map(), map(), map(), map()}
   defp process_beam_files(beam_files, known_modules) do
     results =
       beam_files
@@ -226,7 +227,9 @@ defmodule ExAst.Extractor do
   end
 
   # Process a single BEAM file to extract calls, function locations, specs, types, and structs
-  @spec process_beam_file(String.t(), MapSet.t()) :: {:ok, {String.t(), [map()], map(), [map()], [map()], map() | nil}} | {:error, String.t()}
+  @spec process_beam_file(String.t(), MapSet.t()) ::
+          {:ok, {String.t(), [map()], map(), [map()], [map()], map() | nil}}
+          | {:error, String.t()}
   defp process_beam_file(beam_path, known_modules) do
     with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
          {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do

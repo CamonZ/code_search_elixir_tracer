@@ -1,7 +1,7 @@
-defmodule ExAst.SpecFormatterTest do
+defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.SpecFormatter
+  alias ExAst.Extractor.SpecExtractor.SpecFormatter
 
   describe "format_spec/1" do
     test "formats a complete spec" do
@@ -65,7 +65,7 @@ defmodule ExAst.SpecFormatterTest do
         "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
-      specs = ExAst.SpecExtractor.extract_specs(chunks)
+      specs = ExAst.Extractor.SpecExtractor.extract_specs(chunks)
 
       # Format new/0 spec
       new_spec = Enum.find(specs, &(&1.name == :new and &1.arity == 0))
@@ -81,9 +81,20 @@ defmodule ExAst.SpecFormatterTest do
       formatted = SpecFormatter.format_spec(record_spec)
 
       [clause] = formatted.clauses
-      assert clause.inputs_string == ["t()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()", "non_neg_integer()"]
+
+      assert clause.inputs_string == [
+               "t()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()",
+               "non_neg_integer()"
+             ]
+
       assert clause.return_string == "t()"
-      assert clause.full == "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"
+
+      assert clause.full ==
+               "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"
     end
   end
 end

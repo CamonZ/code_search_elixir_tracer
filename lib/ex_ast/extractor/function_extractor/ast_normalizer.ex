@@ -1,4 +1,4 @@
-defmodule ExAst.AstNormalizer do
+defmodule ExAst.Extractor.FunctionExtractor.AstNormalizer do
   @moduledoc """
   Generic AST normalization utilities.
 
@@ -171,6 +171,16 @@ defmodule ExAst.AstNormalizer do
   # Strip position-related metadata keys
   defp strip_position_metadata(meta) do
     meta
-    |> Keyword.drop([:line, :column, :counter, :file, :end_of_expression, :newlines, :closing, :do, :end])
+    |> Keyword.drop([
+      :line,
+      :column,
+      :counter,
+      :file,
+      :end_of_expression,
+      :newlines,
+      :closing,
+      :do,
+      :end
+    ])
   end
 end

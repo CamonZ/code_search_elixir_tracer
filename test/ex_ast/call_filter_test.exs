@@ -91,9 +91,21 @@ defmodule ExAst.CallFilterTest do
   describe "filter_calls/2" do
     test "filters out stdlib calls by default" do
       calls = [
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "MyApp.Bar", function: "baz", arity: 1}},
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "Enum", function: "map", arity: 2}},
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "erlang", function: "self", arity: 0}}
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "MyApp.Bar", function: "baz", arity: 1}
+        },
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "Enum", function: "map", arity: 2}
+        },
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "erlang", function: "self", arity: 0}
+        }
       ]
 
       filtered = CallFilter.filter_calls(calls)
@@ -104,9 +116,21 @@ defmodule ExAst.CallFilterTest do
 
     test "filters to known modules when provided" do
       calls = [
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "MyApp.Bar", function: "baz", arity: 1}},
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "MyApp.Baz", function: "qux", arity: 0}},
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "SomeLib.Thing", function: "call", arity: 1}}
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "MyApp.Bar", function: "baz", arity: 1}
+        },
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "MyApp.Baz", function: "qux", arity: 0}
+        },
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "SomeLib.Thing", function: "call", arity: 1}
+        }
       ]
 
       known = MapSet.new(["MyApp.Foo", "MyApp.Bar"])
@@ -118,8 +142,16 @@ defmodule ExAst.CallFilterTest do
 
     test "returns empty list when all calls are filtered" do
       calls = [
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "Enum", function: "map", arity: 2}},
-        %{type: :remote, caller: %{module: "MyApp.Foo"}, callee: %{module: "Map", function: "get", arity: 2}}
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "Enum", function: "map", arity: 2}
+        },
+        %{
+          type: :remote,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "Map", function: "get", arity: 2}
+        }
       ]
 
       filtered = CallFilter.filter_calls(calls)
@@ -128,7 +160,11 @@ defmodule ExAst.CallFilterTest do
 
     test "keeps local calls (same module)" do
       calls = [
-        %{type: :local, caller: %{module: "MyApp.Foo"}, callee: %{module: "MyApp.Foo", function: "helper", arity: 1}}
+        %{
+          type: :local,
+          caller: %{module: "MyApp.Foo"},
+          callee: %{module: "MyApp.Foo", function: "helper", arity: 1}
+        }
       ]
 
       filtered = CallFilter.filter_calls(calls)

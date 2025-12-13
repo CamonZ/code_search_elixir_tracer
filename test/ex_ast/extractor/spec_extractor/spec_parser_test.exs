@@ -1,7 +1,7 @@
-defmodule ExAst.SpecParserTest do
+defmodule ExAst.Extractor.SpecExtractor.SpecParserTest do
   use ExUnit.Case, async: true
 
-  alias ExAst.SpecParser
+  alias ExAst.Extractor.SpecExtractor.SpecParser
 
   describe "extract_specs/1" do
     test "extracts specs from abstract_code chunk" do
@@ -80,8 +80,10 @@ defmodule ExAst.SpecParserTest do
             {{:public_func, 1},
              [
                {:type, {10, 9}, :fun,
-                [{:type, {10, 9}, :product, [{:type, {10, 21}, :any, []}]},
-                 {:type, {10, 29}, :ok, []}]}
+                [
+                  {:type, {10, 9}, :product, [{:type, {10, 21}, :any, []}]},
+                  {:type, {10, 29}, :ok, []}
+                ]}
              ]}},
            {:attribute, 20, :callback,
             {{:on_init, 0},
@@ -135,11 +137,15 @@ defmodule ExAst.SpecParserTest do
             {{:multi_clause, 1},
              [
                {:type, {10, 9}, :fun,
-                [{:type, {10, 9}, :product, [{:type, {10, 22}, :integer, []}]},
-                 {:atom, {10, 35}, :ok}]},
+                [
+                  {:type, {10, 9}, :product, [{:type, {10, 22}, :integer, []}]},
+                  {:atom, {10, 35}, :ok}
+                ]},
                {:type, {11, 9}, :fun,
-                [{:type, {11, 9}, :product, [{:type, {11, 22}, :binary, []}]},
-                 {:atom, {11, 35}, :error}]}
+                [
+                  {:type, {11, 9}, :product, [{:type, {11, 22}, :binary, []}]},
+                  {:atom, {11, 35}, :error}
+                ]}
              ]}}
          ]}
 
@@ -261,8 +267,13 @@ defmodule ExAst.SpecParserTest do
               {:type, {10, 9}, :product, [{:var, {10, 14}, :a}]},
               {:var, {10, 20}, :a}
             ]},
-           [{:type, {10, 27}, :constraint,
-             [{:atom, {10, 27}, :is_subtype}, [{:var, {10, 27}, :a}, {:type, {10, 30}, :integer, []}]]}]
+           [
+             {:type, {10, 27}, :constraint,
+              [
+                {:atom, {10, 27}, :is_subtype},
+                [{:var, {10, 27}, :a}, {:type, {10, 30}, :integer, []}]
+              ]}
+           ]
          ]}
 
       result = SpecParser.parse_spec_clause(clause)
@@ -285,7 +296,7 @@ defmodule ExAst.SpecParserTest do
       [clause] = record_success_spec.clauses
       parsed = SpecParser.parse_spec_clause(clause)
 
-      # Should have 6 inputs: t(), non_neg_integer() x 5
+      # Should have 6 inputs: t() x 1, non_neg_integer() x 5
       assert length(parsed.inputs) == 6
 
       # First input should be t() (local type ref)

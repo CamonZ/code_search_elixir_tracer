@@ -173,8 +173,13 @@ defmodule ExAst.OutputTest do
       assert process["kind"] == "def"
       assert process["guard"] == nil
       assert process["pattern"] == "x, y"
-      assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
-      assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+
+      assert process["source_sha"] ==
+               "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
+
+      assert process["ast_sha"] ==
+               "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+
       assert process["generated_by"] == nil
       assert process["macro_source"] == nil
       assert process["complexity"] == 3
@@ -186,7 +191,10 @@ defmodule ExAst.OutputTest do
       assert helper["guard"] == "is_list(x)"
       assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
-      assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+
+      assert helper["ast_sha"] ==
+               "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+
       assert helper["generated_by"] == nil
       assert helper["macro_source"] == nil
       assert helper["complexity"] == 1
@@ -380,8 +388,13 @@ defmodule ExAst.OutputTest do
       assert process["kind"] == "def"
       assert process["guard"] == nil
       assert process["pattern"] == "x, y"
-      assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
-      assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+
+      assert process["source_sha"] ==
+               "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
+
+      assert process["ast_sha"] ==
+               "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+
       assert process["generated_by"] == nil
       assert process["macro_source"] == nil
       assert process["complexity"] == 3
@@ -393,7 +406,10 @@ defmodule ExAst.OutputTest do
       assert helper["guard"] == "is_list(x)"
       assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
-      assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+
+      assert helper["ast_sha"] ==
+               "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+
       assert helper["generated_by"] == nil
       assert helper["macro_source"] == nil
       assert helper["complexity"] == 1

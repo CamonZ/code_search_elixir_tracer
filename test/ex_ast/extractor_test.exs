@@ -151,7 +151,8 @@ defmodule ExAst.ExtractorTest do
 
   # Find a BEAM file from this project to use in tests
   defp find_project_beam_file do
-    build_dir = Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
+    build_dir =
+      Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
 
     build_dir
     |> File.ls!()
@@ -161,7 +162,8 @@ defmodule ExAst.ExtractorTest do
 
   # Find multiple BEAM files from this project to use in tests
   defp find_multiple_project_beam_files(count) do
-    build_dir = Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
+    build_dir =
+      Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
 
     build_dir
     |> File.ls!()
