@@ -8,9 +8,11 @@ Extract call graphs, function locations, specs, types, and struct definitions fr
 - Indexes function locations with source file mappings
 - Parses `@spec` and `@type` definitions
 - Extracts struct field information
+- Detects macro-generated functions (e.g., from `use GenServer`, `defstruct`)
+- Computes cyclomatic complexity for each function clause
 - Supports regular and umbrella projects
 - Filters by main app only or includes dependencies
-- Outputs structured JSON for consumption by code intelligence tools
+- Outputs JSON or TOON (token-optimized) format for LLM consumption
 
 ## Requirements
 
@@ -42,8 +44,8 @@ call_graph [OPTIONS] [PATH]
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--output FILE` | `-o` | Output file path (default: `call_graph.json`) |
-| `--format FORMAT` | `-f` | Output format: `json` (default: `json`) |
+| `--output FILE` | `-o` | Output file path (default: `extracted_trace.json`) |
+| `--format FORMAT` | `-f` | Output format: `json` or `toon` (default: `json`) |
 | `--include-deps` | `-d` | Include all dependencies in analysis |
 | `--deps DEP1,DEP2` | | Include specific dependencies (comma-separated) |
 | `--env ENV` | `-e` | Mix environment to use (default: `dev`) |

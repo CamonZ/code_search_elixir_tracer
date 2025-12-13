@@ -170,6 +170,8 @@ defmodule CodeIntelligenceTracer.Output do
 
   defp format_function_info(info) do
     %{
+      name: info.name,
+      arity: info.arity,
       line: info.line,
       start_line: info.start_line,
       end_line: info.end_line,
@@ -179,7 +181,10 @@ defmodule CodeIntelligenceTracer.Output do
       source_file: info.source_file,
       source_file_absolute: info.source_file_absolute,
       source_sha: info[:source_sha],
-      ast_sha: info[:ast_sha]
+      ast_sha: info[:ast_sha],
+      generated_by: info[:generated_by],
+      macro_source: info[:macro_source],
+      complexity: info[:complexity]
     }
   end
 

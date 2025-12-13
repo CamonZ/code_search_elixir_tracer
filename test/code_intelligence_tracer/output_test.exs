@@ -117,6 +117,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
       locations = %{
         "process/2:10" => %{
           module: "MyApp.Foo",
+          name: "process",
+          arity: 2,
           line: 10,
           start_line: 10,
           end_line: 25,
@@ -126,10 +128,15 @@ defmodule CodeIntelligenceTracer.OutputTest do
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
-          ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+          ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4",
+          generated_by: nil,
+          macro_source: nil,
+          complexity: 3
         },
         "helper/1:27" => %{
           module: "MyApp.Foo",
+          name: "helper",
+          arity: 1,
           line: 27,
           start_line: 27,
           end_line: 30,
@@ -139,7 +146,10 @@ defmodule CodeIntelligenceTracer.OutputTest do
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: nil,
-          ast_sha: "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+          ast_sha: "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234",
+          generated_by: nil,
+          macro_source: nil,
+          complexity: 1
         }
       }
 
@@ -156,6 +166,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert Map.has_key?(foo_funcs, "helper/1:27")
 
       process = foo_funcs["process/2:10"]
+      assert process["name"] == "process"
+      assert process["arity"] == 2
       assert process["line"] == 10
       assert process["start_line"] == 10
       assert process["end_line"] == 25
@@ -164,13 +176,21 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert process["pattern"] == "x, y"
       assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
       assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+      assert process["generated_by"] == nil
+      assert process["macro_source"] == nil
+      assert process["complexity"] == 3
 
       helper = foo_funcs["helper/1:27"]
+      assert helper["name"] == "helper"
+      assert helper["arity"] == 1
       assert helper["line"] == 27
       assert helper["guard"] == "is_list(x)"
       assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
       assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+      assert helper["generated_by"] == nil
+      assert helper["macro_source"] == nil
+      assert helper["complexity"] == 1
     end
 
     test "pretty prints with indentation" do
@@ -306,6 +326,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
       locations = %{
         "process/2:10" => %{
           module: "MyApp.Foo",
+          name: "process",
+          arity: 2,
           line: 10,
           start_line: 10,
           end_line: 25,
@@ -315,10 +337,15 @@ defmodule CodeIntelligenceTracer.OutputTest do
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
-          ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+          ast_sha: "def456abc123def456abc123def456abc123def456abc123def456abc123def4",
+          generated_by: nil,
+          macro_source: nil,
+          complexity: 3
         },
         "helper/1:27" => %{
           module: "MyApp.Foo",
+          name: "helper",
+          arity: 1,
           line: 27,
           start_line: 27,
           end_line: 30,
@@ -328,7 +355,10 @@ defmodule CodeIntelligenceTracer.OutputTest do
           source_file: "lib/my_app/foo.ex",
           source_file_absolute: "/path/lib/my_app/foo.ex",
           source_sha: nil,
-          ast_sha: "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+          ast_sha: "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234",
+          generated_by: nil,
+          macro_source: nil,
+          complexity: 1
         }
       }
 
@@ -345,6 +375,8 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert Map.has_key?(foo_funcs, "helper/1:27")
 
       process = foo_funcs["process/2:10"]
+      assert process["name"] == "process"
+      assert process["arity"] == 2
       assert process["line"] == 10
       assert process["start_line"] == 10
       assert process["end_line"] == 25
@@ -353,13 +385,21 @@ defmodule CodeIntelligenceTracer.OutputTest do
       assert process["pattern"] == "x, y"
       assert process["source_sha"] == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
       assert process["ast_sha"] == "def456abc123def456abc123def456abc123def456abc123def456abc123def4"
+      assert process["generated_by"] == nil
+      assert process["macro_source"] == nil
+      assert process["complexity"] == 3
 
       helper = foo_funcs["helper/1:27"]
+      assert helper["name"] == "helper"
+      assert helper["arity"] == 1
       assert helper["line"] == 27
       assert helper["guard"] == "is_list(x)"
       assert helper["pattern"] == "x"
       assert helper["source_sha"] == nil
       assert helper["ast_sha"] == "123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234"
+      assert helper["generated_by"] == nil
+      assert helper["macro_source"] == nil
+      assert helper["complexity"] == 1
     end
 
     test "includes extraction metadata from stats" do

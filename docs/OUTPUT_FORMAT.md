@@ -105,25 +105,35 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
       "name": "my_function",
       "arity": 2,
       "line": 10,
+      "start_line": 10,
+      "end_line": 18,
       "kind": "def",
       "guard": null,
       "pattern": "x, y",
       "source_file": "lib/my_app/module.ex",
       "source_file_absolute": "/path/to/project/lib/my_app/module.ex",
       "source_sha": "a1b2c3d4e5f6...",
-      "ast_sha": "f6e5d4c3b2a1..."
+      "ast_sha": "f6e5d4c3b2a1...",
+      "generated_by": null,
+      "macro_source": null,
+      "complexity": 3
     },
     "my_function/2:15": {
       "name": "my_function",
       "arity": 2,
       "line": 15,
+      "start_line": 15,
+      "end_line": 22,
       "kind": "def",
       "guard": "is_list(y)",
       "pattern": "x, y",
       "source_file": "lib/my_app/module.ex",
       "source_file_absolute": "/path/to/project/lib/my_app/module.ex",
       "source_sha": "b2c3d4e5f6a1...",
-      "ast_sha": "e5d4c3b2a1f6..."
+      "ast_sha": "e5d4c3b2a1f6...",
+      "generated_by": null,
+      "macro_source": null,
+      "complexity": 2
     }
   }
 }
@@ -133,6 +143,8 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
 - `name` - Function name without arity (e.g., `"my_function"`)
 - `arity` - Number of arguments as integer
 - `line` - Line number where this clause is defined
+- `start_line` - Start line of the clause (same as `line`)
+- `end_line` - End line of the clause (computed from AST body)
 - `kind` - Function kind (`def`, `defp`, `defmacro`, `defmacrop`)
 - `guard` - Guard expression as string, or `null` if no guard
 - `pattern` - Function arguments as human-readable string (e.g., `"x, y"`, `"{:ok, value}"`)
@@ -157,6 +169,28 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
 **SHA fields:**
 - `source_sha` - SHA256 hash of the source code for this clause. Detects any change (formatting, comments, code). May be `null` if the source file is unavailable.
 - `ast_sha` - SHA256 hash of the normalized AST for this clause. Detects semantic changes only (ignores formatting, comments, line numbers).
+
+**Macro-generated function fields:**
+- `generated_by` - Module that generated this function (e.g., `"Phoenix.Endpoint"`, `"Kernel"`), or `null` for regular functions
+- `macro_source` - Library source location where the macro is defined (e.g., `"lib/phoenix/endpoint.ex:552"`), or `null` if not available
+
+For macro-generated functions (e.g., from `use GenServer`, `defstruct`):
+- `end_line` equals `start_line` (body AST contains library line numbers)
+- `generated_by` identifies the generating module
+- `macro_source` points to the library source when available
+
+**Complexity field:**
+- `complexity` - Cyclomatic complexity of the function clause (integer >= 1)
+
+Complexity is calculated by counting decision points:
+- Base complexity: 1
+- `case` clauses: +1 per clause beyond the first
+- `cond` clauses: +1 per clause beyond the first
+- `if`/`unless`: +1
+- `with` match clauses: +1 per `<-` clause, +1 per `else` clause
+- `try`/`rescue`/`catch`: +1 per rescue/catch clause
+- `receive` clauses: +1 per clause beyond the first
+- `and`/`or`/`&&`/`||`: +1 (short-circuit evaluation)
 
 ### `specs`
 Map of modules to their `@spec` definitions.
@@ -277,25 +311,35 @@ A minimal example showing all sections:
         "name": "greet",
         "arity": 1,
         "line": 12,
+        "start_line": 12,
+        "end_line": 18,
         "kind": "def",
         "guard": null,
         "pattern": "name",
         "source_file": "lib/greeter.ex",
         "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
         "source_sha": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",
-        "ast_sha": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        "ast_sha": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "generated_by": null,
+        "macro_source": null,
+        "complexity": 2
       },
       "format_name/1:20": {
         "name": "format_name",
         "arity": 1,
         "line": 20,
+        "start_line": 20,
+        "end_line": 23,
         "kind": "defp",
         "guard": null,
         "pattern": "name",
         "source_file": "lib/greeter.ex",
         "source_file_absolute": "/home/user/my_app/lib/greeter.ex",
         "source_sha": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
-        "ast_sha": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+        "ast_sha": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        "generated_by": null,
+        "macro_source": null,
+        "complexity": 1
       }
     }
   },
@@ -413,6 +457,8 @@ function_locations:
       name: format_name
       arity: 1
       line: 20
+      start_line: 20
+      end_line: 23
       kind: defp
       guard: ~
       pattern: name
@@ -420,10 +466,15 @@ function_locations:
       source_file_absolute: /home/user/my_app/lib/greeter.ex
       source_sha: fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321
       ast_sha: abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+      generated_by: ~
+      macro_source: ~
+      complexity: 1
     greet/1:12:
       name: greet
       arity: 1
       line: 12
+      start_line: 12
+      end_line: 18
       kind: def
       guard: ~
       pattern: name
@@ -431,6 +482,9 @@ function_locations:
       source_file_absolute: /home/user/my_app/lib/greeter.ex
       source_sha: a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890
       ast_sha: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+      generated_by: ~
+      macro_source: ~
+      complexity: 2
 specs:
   MyApp.Greeter[1]:
     - arity: 1
