@@ -56,6 +56,7 @@ defmodule CodeIntelligenceTracer.ComplexityAnalyzer do
   end
 
   # Recursively calculate max nesting depth
+  @spec calculate_max_nesting_depth(term(), non_neg_integer()) :: non_neg_integer()
   defp calculate_max_nesting_depth(ast, current_depth) when is_tuple(ast) do
     # If this node introduces nesting, increment depth
     node_depth = if introduces_nesting?(ast), do: current_depth + 1, else: current_depth
@@ -79,6 +80,7 @@ defmodule CodeIntelligenceTracer.ComplexityAnalyzer do
   end
 
   # Check if a node introduces nesting
+  @spec introduces_nesting?(term()) :: boolean()
   defp introduces_nesting?({:with, _, _}), do: true
   defp introduces_nesting?({:case, _, _}), do: true
   defp introduces_nesting?({:cond, _, _}), do: true
@@ -90,6 +92,7 @@ defmodule CodeIntelligenceTracer.ComplexityAnalyzer do
   defp introduces_nesting?(_), do: false
 
   # Extract children from AST node
+  @spec get_ast_children(term()) :: [term()]
   defp get_ast_children({_form, _meta, args}) when is_list(args) do
     args
   end
@@ -105,6 +108,7 @@ defmodule CodeIntelligenceTracer.ComplexityAnalyzer do
   defp get_ast_children(_), do: []
 
   # Calculate complexity contribution of a single AST node
+  @spec complexity_of(term()) :: non_neg_integer()
   defp complexity_of({:case, _meta, [_expr, [do: clauses]]}) when is_list(clauses) do
     max(0, length(clauses) - 1)
   end

@@ -100,6 +100,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Validate that all provided files exist and have .beam extension
+  @spec validate_beam_files([String.t()]) :: :ok | {:error, String.t()}
   defp validate_beam_files(files) do
     Enum.reduce_while(files, :ok, fn file_path, :ok ->
       cond do
@@ -116,6 +117,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Discover BEAM files from a project
+  @spec discover_beam_files(map()) :: {:ok, [String.t()], map()} | {:error, String.t()}
   defp discover_beam_files(options) do
     with {:ok, build_lib_path} <- BuildDiscovery.find_build_dir(options.path, options.env),
          {:ok, project_apps} <- BuildDiscovery.find_project_apps(options.path) do
@@ -145,6 +147,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Run extraction and build result struct
+  @spec run_extraction([String.t()], map()) :: {:ok, t()} | {:error, String.t()}
   defp run_extraction(beam_files, context) do
     {extraction_time_ms, {calls, function_locations, specs, types, structs, stats}} =
       :timer.tc(fn -> process_beam_files(beam_files, context.known_modules) end, :millisecond)
@@ -172,6 +175,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Process BEAM files in parallel and merge results
+  @spec process_beam_files([String.t()], MapSet.t()) :: {[map()], map(), map(), map(), map(), map()}
   defp process_beam_files(beam_files, known_modules) do
     results =
       beam_files
@@ -207,6 +211,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Record stats for a successfully processed module
+  @spec record_module_stats(map(), [map()], map(), [map()], [map()], map() | nil) :: map()
   defp record_module_stats(stats, calls, locations, specs, types, struct_info) do
     structs_count = if struct_info, do: 1, else: 0
 
@@ -221,6 +226,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Process a single BEAM file to extract calls, function locations, specs, types, and structs
+  @spec process_beam_file(String.t(), MapSet.t()) :: {:ok, {String.t(), [map()], map(), [map()], [map()], map() | nil}} | {:error, String.t()}
   defp process_beam_file(beam_path, known_modules) do
     with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
          {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do
@@ -256,6 +262,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   end
 
   # Add module name to each function location for grouping in output
+  @spec add_module_to_locations(map(), atom()) :: map()
   defp add_module_to_locations(functions, module) do
     module_string = Utils.module_to_string(module)
 

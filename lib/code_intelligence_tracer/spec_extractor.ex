@@ -14,6 +14,12 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   - `TypeDefinitionExtractor` for type definitions
 
   Also provides correlation of specs with function locations.
+
+  ## Data Format Conventions
+
+  This module works with data structures following conventions documented in:
+  - `docs/conventions/PARAMETER_FORMATTING.md` - Parameter naming and formatting
+  - `docs/conventions/DATA_STRUCTURES.md` - Standard data structure definitions
   """
 
   @type spec_record :: SpecParser.spec_record()
@@ -163,6 +169,7 @@ defmodule CodeIntelligenceTracer.SpecExtractor do
   end
 
   # Simplify formatted spec for embedding in function location
+  @spec simplify_spec_for_function(map()) :: map()
   defp simplify_spec_for_function(%{kind: kind, line: line, clauses: [clause | _]}) do
     %{
       kind: kind,

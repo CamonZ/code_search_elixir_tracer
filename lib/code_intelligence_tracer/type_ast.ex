@@ -259,6 +259,7 @@ defmodule CodeIntelligenceTracer.TypeAst do
   end
 
   # Parse map field associations
+  @spec parse_map_field(term()) :: map()
   defp parse_map_field({:type, _, :map_field_exact, [key, value]}) do
     %{kind: :exact, key: parse(key), value: parse(value)}
   end
@@ -271,6 +272,7 @@ defmodule CodeIntelligenceTracer.TypeAst do
     %{kind: :unknown, key: %{type: :any}, value: %{type: :any}}
   end
 
+  @spec format_map_field(map()) :: String.t()
   defp format_map_field(%{kind: :exact, key: key, value: value}) do
     key_str = format(key)
     value_str = format(value)

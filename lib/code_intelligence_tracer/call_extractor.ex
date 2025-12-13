@@ -27,6 +27,13 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   - `module` - The target module (same as caller module for local calls)
   - `function` - The function name being called
   - `arity` - The number of arguments in the call
+  - `args` - Arguments as human-readable string (e.g., "list, &transform/1")
+
+  ## Data Format Conventions
+
+  This module works with data structures following conventions documented in:
+  - `docs/conventions/PARAMETER_FORMATTING.md` - Parameter naming and formatting
+  - `docs/conventions/DATA_STRUCTURES.md` - Standard data structure definitions
   """
 
   alias CodeIntelligenceTracer.Utils
@@ -161,6 +168,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     end)
   end
 
+  @spec extract_calls_from_definition(tuple(), String.t(), String.t()) :: [map()]
   defp extract_calls_from_definition({{func_name, arity}, kind, _meta, clauses}, module_string, source_file) do
     function_string = "#{func_name}/#{arity}"
 
@@ -170,6 +178,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
     end)
   end
 
+  @spec extract_calls_from_ast(term(), String.t(), String.t(), atom(), String.t()) :: [map()]
   defp extract_calls_from_ast(ast, module_string, function_string, kind, source_file) do
     {_ast, calls} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -213,6 +222,11 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   # Function capture: &Module.function/arity
   # Pattern: {:&, meta, [{:/, _, [{remote_call}, arity]}]}
   # Returns :skip to prevent walking into nested remote call
+  @spec extract_call(term(), String.t()) ::
+          {:remote, map(), non_neg_integer()}
+          | {:local, map(), non_neg_integer()}
+          | {:skip, :remote | :local, map(), non_neg_integer()}
+          | nil
   defp extract_call(
          {:&, meta, [{:/, _, [{{:., _, [module, func]}, _, _args}, arity]}]},
          _caller_module
@@ -347,6 +361,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   defp variable_reference?(_), do: false
 
   # Normalize module reference to string
+  @spec normalize_module(term()) :: {:ok, String.t()} | :error
   defp normalize_module(module) when is_atom(module) do
     {:ok, Utils.module_to_string(module)}
   end
@@ -362,10 +377,12 @@ defmodule CodeIntelligenceTracer.CallExtractor do
 
   defp normalize_module(_), do: :error
 
+  @spec local_function_call?(atom()) :: boolean()
   defp local_function_call?(func) do
     func not in @special_forms
   end
 
+  @spec build_call_record(atom(), String.t(), String.t(), atom(), String.t(), non_neg_integer(), map()) :: map()
   defp build_call_record(type, module_string, function_string, kind, source_file, line, callee) do
     %{
       type: type,

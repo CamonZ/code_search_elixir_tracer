@@ -55,6 +55,12 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   - `receive` clauses: +1 per clause beyond the first
   - `and`/`or`/`&&`/`||`: +1 (short-circuit evaluation)
 
+  ## Data Format Conventions
+
+  This module works with data structures following conventions documented in:
+  - `docs/conventions/PARAMETER_FORMATTING.md` - Parameter naming and formatting
+  - `docs/conventions/DATA_STRUCTURES.md` - Standard data structure definitions
+
   """
 
   @type function_kind :: :def | :defp | :defmacro | :defmacrop
@@ -144,6 +150,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   # Extract info for each clause in a function definition
+  @spec extract_clause_infos(tuple(), String.t(), String.t()) :: [{String.t(), clause_info()}]
   defp extract_clause_infos({{func_name, arity}, kind, def_meta, clauses}, source_file, source_file_absolute) do
     # Detect macro-generated functions via :context in definition metadata
     generated_by = Keyword.get(def_meta, :context)
@@ -189,6 +196,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   # Format the generating module as a string, or nil if not generated
+  @spec format_generated_by(atom() | nil) :: String.t() | nil
   defp format_generated_by(nil), do: nil
 
   defp format_generated_by(module) when is_atom(module) do
@@ -196,6 +204,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   # Format the macro source location as "relative/path.ex:line" or nil
+  @spec format_macro_source({String.t() | [integer()], non_neg_integer()} | nil) :: String.t() | nil
   defp format_macro_source(nil), do: nil
 
   defp format_macro_source({path, line}) when is_binary(path) and is_integer(line) do
@@ -210,6 +219,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   defp format_macro_source(_other), do: nil
 
   # Extract guard expression from a single clause as string
+  @spec extract_guard([term()]) :: String.t() | nil
   defp extract_guard([]), do: nil
   defp extract_guard(guards) do
     StringFormatting.join_with_separator(guards, " and ", &guard_to_string/1)
@@ -220,11 +230,13 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   # Convert function arguments to human-readable string
+  @spec args_to_string([term()]) :: String.t()
   defp args_to_string(args) do
     StringFormatting.format_list(args, ", ", &arg_to_string/1, "")
   end
 
   # Convert a single argument AST to string
+  @spec arg_to_string(term()) :: String.t()
   defp arg_to_string(arg) do
     arg
     |> AstNormalizer.strip_metadata()
@@ -233,6 +245,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   # Convert a guard AST to a human-readable string
   # Guards in debug info use Erlang form like {:., [], [:erlang, :is_binary]}
+  @spec guard_to_string(term()) :: String.t()
   defp guard_to_string(guard_ast) do
     guard_ast
     |> AstNormalizer.normalize_guard_ast()
@@ -240,6 +253,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   # Walk the AST to find the maximum line number
+  @spec find_max_line(term()) :: non_neg_integer()
   defp find_max_line(ast) do
     {_ast, max_line} =
       Macro.prewalk(ast, 0, fn node, acc ->
@@ -359,6 +373,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   # Convert absolute path to relative path
   # Strips everything up to and including "lib/" or "test/"
+  @spec make_relative_path(String.t()) :: String.t()
   defp make_relative_path(absolute_path) do
     cond do
       String.contains?(absolute_path, "/lib/") ->

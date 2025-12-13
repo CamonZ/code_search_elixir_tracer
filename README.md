@@ -113,6 +113,24 @@ See [docs/OUTPUT_FORMAT.md](docs/OUTPUT_FORMAT.md) for the complete output schem
 4. Filters calls to only include project modules (unless `--include-deps`)
 5. Outputs structured JSON
 
+## Documentation
+
+### Data Format Conventions
+
+The codebase follows established conventions for:
+- Parameter naming and formatting
+- Standard data structure definitions
+- Type representation
+
+See the conventions documentation for details:
+- [docs/conventions/PARAMETER_FORMATTING.md](docs/conventions/PARAMETER_FORMATTING.md) - Parameter naming and formatting standards
+- [docs/conventions/DATA_STRUCTURES.md](docs/conventions/DATA_STRUCTURES.md) - Standard data structure definitions
+
+### Development Guide
+
+- [CLAUDE.md](CLAUDE.md) - Development commands and code style guidelines
+- [docs/OUTPUT_FORMAT.md](docs/OUTPUT_FORMAT.md) - Complete output format specification
+
 ## Development
 
 ```bash
