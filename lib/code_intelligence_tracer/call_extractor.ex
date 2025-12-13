@@ -298,6 +298,54 @@ defmodule CodeIntelligenceTracer.CallExtractor do
 
   defp extract_call(_node, _caller_module), do: nil
 
+  # ============================================================================
+  # Guard Helper Functions
+  # ============================================================================
+
+  # These helper functions provide reusable pattern matching checks for different
+  # call types. They improve code readability and documentation by making the intent
+  # of each guard condition explicit. Though not currently used inline in pattern
+  # matching, they serve as documentation for the call patterns and can be used
+  # if the extract_call implementation is refactored to use cond blocks.
+
+  @dialyzer :no_unused
+  @doc false
+  @spec remote_function_capture?(node :: tuple()) :: boolean()
+  defp remote_function_capture?(
+    {:&, _, [{:/, _, [{{:., _, [_module, func]}, _, _args}, arity]}]}
+  ) when is_atom(func) and is_integer(arity),
+  do: true
+
+  defp remote_function_capture?(_), do: false
+
+  @doc false
+  @spec local_function_capture?(node :: tuple()) :: boolean()
+  defp local_function_capture?(
+    {:&, _, [{:/, _, [{func, _, context}, arity]}]}
+  ) when is_atom(func) and is_integer(arity) and is_atom(context),
+  do: true
+
+  defp local_function_capture?(_), do: false
+
+  @doc false
+  @spec remote_call?(node :: tuple()) :: boolean()
+  defp remote_call?({{:., _, [_module, func]}, _meta, _args}) when is_atom(func),
+    do: true
+
+  defp remote_call?(_), do: false
+
+  @doc false
+  @spec local_call?(node :: tuple()) :: boolean()
+  defp local_call?({func, _meta, args}) when is_atom(func) and is_list(args),
+    do: true
+
+  defp local_call?(_), do: false
+
+  @doc false
+  @spec variable_reference?(node :: tuple()) :: boolean()
+  defp variable_reference?({_name, _meta, nil}), do: true
+  defp variable_reference?(_), do: false
+
   # Normalize module reference to string
   defp normalize_module(module) when is_atom(module) do
     {:ok, Utils.module_to_string(module)}
