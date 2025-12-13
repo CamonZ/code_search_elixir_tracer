@@ -183,7 +183,8 @@ defmodule CodeIntelligenceTracer.Output do
       ast_sha: info[:ast_sha],
       generated_by: info[:generated_by],
       macro_source: info[:macro_source],
-      complexity: info[:complexity]
+      complexity: info[:complexity],
+      max_nesting_depth: info[:max_nesting_depth]
     }
   end
 
