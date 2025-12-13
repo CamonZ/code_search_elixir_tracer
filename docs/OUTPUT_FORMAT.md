@@ -58,7 +58,7 @@ Statistics about the extraction process:
 ```
 
 ### `calls`
-Array of function call records. Each call represents a function invoking another function.
+Array of function call records. Each call represents a function invoking another function. This includes direct function calls and function captures.
 
 ```json
 {
@@ -81,6 +81,16 @@ Array of function call records. Each call represents a function invoking another
 **Call types:**
 - `local` - Call to a function in the same module
 - `remote` - Call to a function in a different module
+
+**Function Captures:**
+Function captures (e.g., `&Module.function/arity` and `&function/arity`) are included in the calls array with the same structure as regular function calls. They are identified by the line number of the capture expression.
+
+**Excluded Calls:**
+The following are excluded from the calls array:
+- Special forms and language constructs (`if`, `case`, `cond`, `try`, `receive`, `for`, `with`, `quote`, `fn`, etc.)
+- Operators (`=`, `==`, `+`, `-`, `*`, `/`, `and`, `or`, `&&`, `||`, etc.)
+- Module directives (`import`, `require`, `alias`, `use`, `def`, `defp`, etc.)
+- Language features (`::`, `->`, `<-`, `:=`, `@`, `&` when not used as function capture)
 
 **Caller kinds:**
 - `def` - Public function
@@ -281,6 +291,14 @@ Map of modules to their struct definitions. Only modules that define structs are
   }
 }
 ```
+
+**Struct field information:**
+- `field` - Field name as string
+- `default` - Default value as string representation (e.g., `"nil"`, `"0"`, `"[]"`)
+- `required` - Always `false` in current implementation (see note below)
+
+**Note on `@enforce_keys`:**
+The `@enforce_keys` directive information is not preserved in BEAM debug info as it's only used at compile time. Therefore, the `required` field is always `false`. To determine which fields are enforced at runtime, you would need to inspect the source code directly.
 
 ## Example Output
 
