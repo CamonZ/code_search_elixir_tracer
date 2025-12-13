@@ -29,6 +29,8 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   - `arity` - The number of arguments in the call
   """
 
+  alias CodeIntelligenceTracer.Utils
+
   @type function_kind :: :def | :defp | :defmacro | :defmacrop
 
   @type call_record :: %{
@@ -151,7 +153,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   """
   @spec extract_calls(list(), module(), String.t()) :: [call_record()]
   def extract_calls(definitions, module_name, source_file) do
-    module_string = module_to_string(module_name)
+    module_string = Utils.module_to_string(module_name)
 
     definitions
     |> Enum.flat_map(fn definition ->
@@ -298,7 +300,7 @@ defmodule CodeIntelligenceTracer.CallExtractor do
 
   # Normalize module reference to string
   defp normalize_module(module) when is_atom(module) do
-    {:ok, module_to_string(module)}
+    {:ok, Utils.module_to_string(module)}
   end
 
   defp normalize_module({:__aliases__, _, parts}) when is_list(parts) do
@@ -311,12 +313,6 @@ defmodule CodeIntelligenceTracer.CallExtractor do
   end
 
   defp normalize_module(_), do: :error
-
-  defp module_to_string(module) when is_atom(module) do
-    module
-    |> Atom.to_string()
-    |> String.replace_leading("Elixir.", "")
-  end
 
   defp local_function_call?(func) do
     func not in @special_forms

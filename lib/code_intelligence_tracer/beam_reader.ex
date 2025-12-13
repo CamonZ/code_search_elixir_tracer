@@ -3,6 +3,8 @@ defmodule CodeIntelligenceTracer.BeamReader do
   Reads raw chunks from BEAM files using :beam_lib.
   """
 
+  alias CodeIntelligenceTracer.Utils
+
   @chunks [:debug_info, :attributes, :abstract_code]
 
   @doc """
@@ -174,14 +176,9 @@ defmodule CodeIntelligenceTracer.BeamReader do
       info when is_list(info) ->
         case Keyword.get(info, :module) do
           nil -> :error
-          module -> {:ok, module_to_string(module)}
+          module -> {:ok, Utils.module_to_string(module)}
         end
     end
   end
 
-  defp module_to_string(module) when is_atom(module) do
-    module
-    |> Atom.to_string()
-    |> String.replace_leading("Elixir.", "")
-  end
 end

@@ -16,6 +16,7 @@ defmodule CodeIntelligenceTracer.Extractor do
   alias CodeIntelligenceTracer.FunctionExtractor
   alias CodeIntelligenceTracer.SpecExtractor
   alias CodeIntelligenceTracer.StructExtractor
+  alias CodeIntelligenceTracer.Utils
 
   defstruct [
     :project_type,
@@ -246,7 +247,7 @@ defmodule CodeIntelligenceTracer.Extractor do
     with {:ok, {module, chunks}} <- BeamReader.read_chunks(beam_path),
          {:ok, debug_info} <- BeamReader.extract_debug_info(chunks, module) do
       source_file = debug_info[:file] || ""
-      module_name = module_to_string(module)
+      module_name = Utils.module_to_string(module)
 
       # Extract function calls
       calls =
@@ -278,17 +279,11 @@ defmodule CodeIntelligenceTracer.Extractor do
 
   # Add module name to each function location for grouping in output
   defp add_module_to_locations(functions, module) do
-    module_string = module_to_string(module)
+    module_string = Utils.module_to_string(module)
 
     functions
     |> Enum.into(%{}, fn {func_key, info} ->
       {func_key, Map.put(info, :module, module_string)}
     end)
-  end
-
-  defp module_to_string(module) when is_atom(module) do
-    module
-    |> Atom.to_string()
-    |> String.replace_leading("Elixir.", "")
   end
 end
