@@ -20,7 +20,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
         source_sha: "a1b2c3...",
         ast_sha: "d4e5f6...",
         generated_by: nil,
-        macro_source: nil
+        macro_source: nil,
+        complexity: 1
       }
 
   Multi-clause functions produce multiple entries, one per clause.
@@ -34,6 +35,20 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   - `macro_source` contains the library source location (e.g., "deps/phoenix/lib/phoenix/endpoint.ex:552")
   - `end_line` equals `line` (body AST contains library line numbers, not user code)
   - `source_sha` is computed only for the invocation line
+
+  ## Cyclomatic Complexity
+
+  The `complexity` field contains the cyclomatic complexity of the function clause,
+  computed by counting decision points in the body AST:
+
+  - Base complexity: 1
+  - `case` clauses: +1 per clause beyond the first
+  - `cond` clauses: +1 per clause beyond the first
+  - `if`/`unless`: +1
+  - `with` match clauses: +1 per clause, +1 per else clause
+  - `try`/`rescue`/`catch`: +1 per rescue/catch clause
+  - `receive` clauses: +1 per clause beyond the first
+  - `and`/`or`/`&&`/`||`: +1 (short-circuit evaluation)
 
   """
 
@@ -53,7 +68,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
           source_sha: String.t() | nil,
           ast_sha: String.t(),
           generated_by: String.t() | nil,
-          macro_source: String.t() | nil
+          macro_source: String.t() | nil,
+          complexity: non_neg_integer()
         }
 
   @doc """
@@ -157,7 +173,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
         source_sha: compute_source_sha(source_file_absolute, line, end_line),
         ast_sha: compute_clause_ast_sha(clause),
         generated_by: format_generated_by(generated_by),
-        macro_source: format_macro_source(macro_file_info)
+        macro_source: format_macro_source(macro_file_info),
+        complexity: compute_complexity(body)
       }
 
       {clause_key, clause_info}
@@ -186,6 +203,100 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   defp format_macro_source(_other), do: nil
+
+  @doc """
+  Compute cyclomatic complexity of a function body AST.
+
+  Walks the AST and counts decision points to calculate complexity.
+  Base complexity is 1, with additional points for branching constructs.
+
+  ## Examples
+
+      iex> compute_complexity({:ok, [], nil})
+      1
+
+      iex> compute_complexity({:if, [], [condition, [do: a, else: b]]})
+      2
+
+  """
+  @spec compute_complexity(term()) :: non_neg_integer()
+  def compute_complexity(body_ast) do
+    {_ast, complexity} =
+      Macro.prewalk(body_ast, 1, fn node, acc ->
+        {node, acc + complexity_of(node)}
+      end)
+
+    complexity
+  end
+
+  # Calculate complexity contribution of a single AST node
+  # case: +1 for each clause beyond the first
+  defp complexity_of({:case, _meta, [_expr, [do: clauses]]}) when is_list(clauses) do
+    max(0, length(clauses) - 1)
+  end
+
+  # cond: +1 for each clause beyond the first
+  defp complexity_of({:cond, _meta, [[do: clauses]]}) when is_list(clauses) do
+    max(0, length(clauses) - 1)
+  end
+
+  # if/unless: +1 for the branch
+  defp complexity_of({op, _meta, _args}) when op in [:if, :unless] do
+    1
+  end
+
+  # with: +1 for each <- clause, +1 for each else clause
+  defp complexity_of({:with, _meta, args}) when is_list(args) do
+    # Count <- clauses (match operations)
+    match_clauses = Enum.count(args, fn
+      {:<-, _, _} -> true
+      _ -> false
+    end)
+
+    # Count else clauses if present
+    else_clauses = case List.last(args) do
+      [do: _, else: else_block] when is_list(else_block) -> length(else_block)
+      [else: else_block] when is_list(else_block) -> length(else_block)
+      _ -> 0
+    end
+
+    match_clauses + else_clauses
+  end
+
+  # try/rescue/catch: +1 for each rescue/catch clause
+  defp complexity_of({:try, _meta, [block_opts]}) when is_list(block_opts) do
+    rescue_count = case Keyword.get(block_opts, :rescue) do
+      nil -> 0
+      clauses when is_list(clauses) -> length(clauses)
+      _ -> 0
+    end
+
+    catch_count = case Keyword.get(block_opts, :catch) do
+      nil -> 0
+      clauses when is_list(clauses) -> length(clauses)
+      _ -> 0
+    end
+
+    rescue_count + catch_count
+  end
+
+  # receive: +1 for each clause beyond the first
+  defp complexity_of({:receive, _meta, [[do: clauses]]}) when is_list(clauses) do
+    max(0, length(clauses) - 1)
+  end
+
+  # receive with after: +1 for each clause beyond the first, +1 for after
+  defp complexity_of({:receive, _meta, [[do: clauses, after: _after]]}) when is_list(clauses) do
+    max(0, length(clauses) - 1) + 1
+  end
+
+  # Boolean operators (short-circuit): +1
+  defp complexity_of({op, _meta, [_left, _right]}) when op in [:and, :or, :&&, :||] do
+    1
+  end
+
+  # All other nodes: no complexity contribution
+  defp complexity_of(_node), do: 0
 
   # Extract guard expression from a single clause as string
   defp extract_guard([]), do: nil
