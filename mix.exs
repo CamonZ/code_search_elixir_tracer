@@ -18,8 +18,8 @@ defmodule CodeSearchElixirTracer.MixProject do
 
   defp escript do
     [
-      main_module: CodeIntelligenceTracer.CLI,
-      name: "code_search_elixir_tracer"
+      main_module: ExAst.CLI,
+      name: "ex_ast"
     ]
   end
 

@@ -12,7 +12,7 @@ Create CLI module with argument parsing using OptionParser.
 
 - [x] Implement `main/1` as escript entry point
 - [x] Implement `parse_args/1` supporting:
-  - `-o, --output` (string, default: "call_graph.json")
+  - `-o, --output` (string, default: "ex_ast.json")
   - `-f, --format` (string, "json" or "toon", default: "json")
   - `-d, --include-deps` (boolean)
   - `--deps` (string, comma-separated)

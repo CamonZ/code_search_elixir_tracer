@@ -1,9 +1,9 @@
-defmodule CodeIntelligenceTracer.TestHelpers do
+defmodule ExAst.TestHelpers do
   @moduledoc """
   Common test utilities and fixtures.
   """
 
-  alias CodeIntelligenceTracer.BeamReader
+  alias ExAst.BeamReader
 
   @doc """
   Get the path to the compiled BEAM file for a module.
@@ -13,8 +13,8 @@ defmodule CodeIntelligenceTracer.TestHelpers do
       iex> get_beam_path(Enum)
       "/path/to/erlang/lib/stdlib-*/ebin/enum.beam"
 
-      iex> get_beam_path(CodeIntelligenceTracer.BeamReader)
-      "/path/to/project/_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.CodeIntelligenceTracer.BeamReader.beam"
+      iex> get_beam_path(ExAst.BeamReader)
+      "/path/to/project/_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.BeamReader.beam"
 
   """
   @spec get_beam_path(module()) :: String.t()
@@ -31,7 +31,7 @@ defmodule CodeIntelligenceTracer.TestHelpers do
 
   ## Examples
 
-      iex> {:ok, debug_info} = load_debug_info(CodeIntelligenceTracer.BeamReader)
+      iex> {:ok, debug_info} = load_debug_info(ExAst.BeamReader)
       iex> debug_info.definitions |> length()
       15
 
@@ -57,7 +57,7 @@ defmodule CodeIntelligenceTracer.TestHelpers do
 
   ## Examples
 
-      iex> functions = extract_with(CodeIntelligenceTracer.BeamReader, fn debug_info ->
+      iex> functions = extract_with(ExAst.BeamReader, fn debug_info ->
       ...>   FunctionExtractor.extract_functions(debug_info.definitions, debug_info[:file])
       ...> end)
       iex> is_map(functions)

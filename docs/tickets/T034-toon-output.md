@@ -46,7 +46,7 @@ See: https://github.com/kentaro/toon_ex
 ## Usage
 
 ```bash
-./call_graph -f toon -o call_graph.toon /path/to/project
+./ex_ast -f toon -o ex_ast.toon /path/to/project
 ```
 
 ## Tests

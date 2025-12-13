@@ -57,8 +57,8 @@ After migrating all logic to the unified module.
 ## Acceptance Criteria
 
 - [x] Single `Output` module handles both JSON and TOON formats
-- [x] `./call_graph -F toon` produces `extracted_trace.toon` (not `.json`)
-- [x] `./call_graph -F json` produces `extracted_trace.json`
+- [x] `./ex_ast -F toon` produces `extracted_trace.toon` (not `.json`)
+- [x] `./ex_ast -F json` produces `extracted_trace.json`
 - [x] Explicit `-o custom.ext` still works regardless of format
 - [x] All existing tests pass
 - [x] No code duplication between format handlers

@@ -11,9 +11,9 @@ Verify escript builds and runs correctly with basic integration.
 ## Acceptance Criteria
 
 - [x] Run `mix escript.build` successfully
-- [x] `./call_graph --help` displays help text
-- [x] `./call_graph` with no args uses current directory
-- [x] `./call_graph /path/to/project` accepts project path
+- [x] `./ex_ast --help` displays help text
+- [x] `./ex_ast` with no args uses current directory
+- [x] `./ex_ast /path/to/project` accepts project path
 - [x] Exit codes: 0 for success, 1 for error
 - [x] Clear error message when build directory not found
 
@@ -21,6 +21,6 @@ Verify escript builds and runs correctly with basic integration.
 
 ```bash
 mix escript.build
-./call_graph --help
-./call_graph /nonexistent  # Should exit 1 with error message
+./ex_ast --help
+./ex_ast /nonexistent  # Should exit 1 with error message
 ```

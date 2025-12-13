@@ -34,16 +34,16 @@ Add support for processing one or more BEAM files specified via command line arg
 
 ```bash
 # Process single BEAM file
-./call_graph --file _build/dev/lib/my_app/ebin/Elixir.MyApp.Module.beam
+./ex_ast --file _build/dev/lib/my_app/ebin/Elixir.MyApp.Module.beam
 
 # Process multiple BEAM files
-./call_graph -f A.beam -f B.beam -f C.beam
+./ex_ast -f A.beam -f B.beam -f C.beam
 
 # With output format (note: -F for format, -f for file)
-./call_graph -f path/to/Module.beam -F toon
+./ex_ast -f path/to/Module.beam -F toon
 
 # With output path
-./call_graph -f path/to/Module.beam -o output.json
+./ex_ast -f path/to/Module.beam -o output.json
 ```
 
 ## Implementation Notes
@@ -55,7 +55,7 @@ Add support for processing one or more BEAM files specified via command line arg
 - Added `extract_from_files/1` for parallel processing of multiple files
 - Added `record_module_stats/6` helper shared by both modes
 - File mode sets `project_type: nil` to distinguish from project mode
-- Default output filename changed from `call_graph.json` to `extracted_trace.json`
+- Default output filename changed from `ex_ast.json` to `extracted_trace.json`
 - File mode outputs to current working directory (not BEAM file directory)
 
 ## Files Modified

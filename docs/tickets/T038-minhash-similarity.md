@@ -80,7 +80,7 @@ Add `minhash_signature` field to function_info:
 ### 3. Add CLI option for similarity threshold
 
 ```bash
-./call_graph --find-similar --threshold 0.8
+./ex_ast --find-similar --threshold 0.8
 ```
 
 ## Acceptance Criteria

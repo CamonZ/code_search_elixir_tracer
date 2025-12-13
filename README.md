@@ -1,4 +1,4 @@
-# call_graph
+# ex_ast
 
 Extract call graphs, function locations, specs, types, and struct definitions from compiled Elixir projects.
 
@@ -28,12 +28,12 @@ mix deps.get
 mix escript.build
 ```
 
-This creates the `call_graph` executable. Move it to a directory in your `$PATH`.
+This creates the `ex_ast` executable. Move it to a directory in your `$PATH`.
 
 ## Usage
 
 ```bash
-call_graph [OPTIONS] [PATH]
+ex_ast [OPTIONS] [PATH]
 ```
 
 ### Arguments
@@ -55,22 +55,22 @@ call_graph [OPTIONS] [PATH]
 
 ```bash
 # Analyze current directory
-call_graph
+ex_ast
 
 # Analyze specific project
-call_graph /path/to/project
+ex_ast /path/to/project
 
 # Custom output file
-call_graph -o output.json
+ex_ast -o output.json
 
 # Include all dependencies
-call_graph --include-deps
+ex_ast --include-deps
 
 # Include specific dependencies
-call_graph --deps phoenix,ecto
+ex_ast --deps phoenix,ecto
 
 # Use test environment
-call_graph -e test
+ex_ast -e test
 ```
 
 ## Output Format
@@ -144,6 +144,6 @@ mix format
 mix escript.build
 
 # Run on self
-./call_graph .
+./ex_ast .
 ```
 

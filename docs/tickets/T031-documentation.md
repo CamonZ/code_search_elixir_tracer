@@ -37,16 +37,16 @@ Complete documentation and help text.
 ## Help Text Should Include
 
 ```
-call_graph - Extract call graphs from compiled Elixir projects
+ex_ast - Extract call graphs from compiled Elixir projects
 
 USAGE:
-    call_graph [OPTIONS] [PATH]
+    ex_ast [OPTIONS] [PATH]
 
 ARGUMENTS:
     PATH    Path to Elixir project (default: current directory)
 
 OPTIONS:
-    -o, --output FILE     Output file (default: call_graph.json)
+    -o, --output FILE     Output file (default: ex_ast.json)
     -f, --format FORMAT   Output format: json, toon (default: json)
     -d, --include-deps    Include all dependencies
     --deps DEP1,DEP2      Include specific dependencies
@@ -54,8 +54,8 @@ OPTIONS:
     -h, --help            Show this help
 
 EXAMPLES:
-    call_graph                          # Current dir, JSON output
-    call_graph /path/to/project         # Specific project
-    call_graph -f toon -o graph.toon    # TOON format
-    call_graph --include-deps           # Include all deps
+    ex_ast                          # Current dir, JSON output
+    ex_ast /path/to/project         # Specific project
+    ex_ast -f toon -o graph.toon    # TOON format
+    ex_ast --include-deps           # Include all deps
 ```

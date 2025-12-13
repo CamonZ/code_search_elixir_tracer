@@ -12,7 +12,7 @@ Configure Mix project for escript build.
 
 - [x] Configure escript build in `mix.exs`:
   - `main_module: CodeIntelligenceTracer.CLI`
-  - `name: "call_graph"`
+  - `name: "ex_ast"`
 - [x] Create placeholder `CodeIntelligenceTracer.CLI` module with `main/1` that prints "TODO"
 - [x] Verify `mix compile` succeeds
 - [x] Verify `mix escript.build` produces executable
@@ -29,5 +29,5 @@ Configure Mix project for escript build.
 
 ```bash
 mix compile && mix escript.build
-./call_graph  # Should print "TODO"
+./ex_ast  # Should print "TODO"
 ```

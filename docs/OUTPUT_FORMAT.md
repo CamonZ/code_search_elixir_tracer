@@ -1,6 +1,6 @@
 # Output Format
 
-This document describes the output formats produced by `call_graph`.
+This document describes the output formats produced by `ex_ast`.
 
 The tool supports two output formats:
 - **JSON** (default) - Standard JSON format
@@ -411,7 +411,7 @@ TOON is a compact data format optimized for LLM token efficiency, achieving 30-6
 ## Usage
 
 ```bash
-./call_graph -f toon -o call_graph.toon /path/to/project
+./ex_ast -f toon -o ex_ast.toon /path/to/project
 ```
 
 ## Top-Level Structure
