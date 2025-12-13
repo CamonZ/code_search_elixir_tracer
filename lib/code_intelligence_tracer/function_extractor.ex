@@ -19,7 +19,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
         source_file_absolute: "/full/path/lib/my_app/foo.ex",
         source_sha: "a1b2c3...",
         ast_sha: "d4e5f6...",
-        generated_by: nil
+        generated_by: nil,
+        macro_source: nil
       }
 
   Multi-clause functions produce multiple entries, one per clause.
@@ -30,6 +31,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   via the `:context` metadata. For these functions:
 
   - `generated_by` contains the generating module name (e.g., "Phoenix.Endpoint")
+  - `macro_source` contains the library source location (e.g., "deps/phoenix/lib/phoenix/endpoint.ex:552")
   - `end_line` equals `line` (body AST contains library line numbers, not user code)
   - `source_sha` is computed only for the invocation line
 
@@ -50,7 +52,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
           source_file_absolute: String.t(),
           source_sha: String.t() | nil,
           ast_sha: String.t(),
-          generated_by: String.t() | nil
+          generated_by: String.t() | nil,
+          macro_source: String.t() | nil
         }
 
   @doc """
@@ -122,6 +125,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   defp extract_clause_infos({{func_name, arity}, kind, def_meta, clauses}, source_file, source_file_absolute) do
     # Detect macro-generated functions via :context in definition metadata
     generated_by = Keyword.get(def_meta, :context)
+    # Extract macro source location from :file tuple (present for generated functions)
+    macro_file_info = Keyword.get(def_meta, :file)
 
     clauses
     |> Enum.map(fn {meta, args, guards, body} = clause ->
@@ -151,7 +156,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
         source_file_absolute: source_file_absolute,
         source_sha: compute_source_sha(source_file_absolute, line, end_line),
         ast_sha: compute_clause_ast_sha(clause),
-        generated_by: format_generated_by(generated_by)
+        generated_by: format_generated_by(generated_by),
+        macro_source: format_macro_source(macro_file_info)
       }
 
       {clause_key, clause_info}
@@ -166,6 +172,20 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
     |> Atom.to_string()
     |> String.replace_leading("Elixir.", "")
   end
+
+  # Format the macro source location as "relative/path.ex:line" or nil
+  defp format_macro_source(nil), do: nil
+
+  defp format_macro_source({path, line}) when is_binary(path) and is_integer(line) do
+    relative_path = make_relative_path(path)
+    "#{relative_path}:#{line}"
+  end
+
+  defp format_macro_source({path, line}) when is_list(path) and is_integer(line) do
+    format_macro_source({List.to_string(path), line})
+  end
+
+  defp format_macro_source(_other), do: nil
 
   # Extract guard expression from a single clause as string
   defp extract_guard([]), do: nil

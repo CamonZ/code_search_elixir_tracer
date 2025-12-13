@@ -513,6 +513,52 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           "Function info should have :generated_by key"
       end
     end
+
+    test "all functions include macro_source field" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.BeamReader))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      for {_key, func_info} <- functions do
+        assert Map.has_key?(func_info, :macro_source),
+          "Function info should have :macro_source key"
+      end
+    end
+
+    test "regular functions have nil macro_source" do
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.Extractor.Stats))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Find regular (non-generated) functions
+      regular = Enum.filter(functions, fn {_, info} -> info.generated_by == nil end)
+
+      for {_key, func_info} <- regular do
+        assert func_info.macro_source == nil,
+          "Regular function should have nil macro_source"
+      end
+    end
+
+    test "macro_source format is path:line when present" do
+      # We need a BEAM file from a Phoenix app to test this
+      # For now, test that the format helper works correctly by checking
+      # that any macro_source values match the expected pattern
+      {:ok, {module, chunks}} = BeamReader.read_chunks(get_beam_path(CodeIntelligenceTracer.Extractor.Stats))
+      {:ok, debug_info} = BeamReader.extract_debug_info(chunks, module)
+
+      functions = FunctionExtractor.extract_functions(debug_info.definitions, debug_info.file)
+
+      # Find functions with macro_source
+      with_source = Enum.filter(functions, fn {_, info} -> info.macro_source != nil end)
+
+      for {_key, func_info} <- with_source do
+        # Should be in format "path/file.ex:123"
+        assert func_info.macro_source =~ ~r/.+:\d+$/,
+          "macro_source should be in format 'path:line', got: #{func_info.macro_source}"
+      end
+    end
   end
 
   describe "normalize_ast/1" do
