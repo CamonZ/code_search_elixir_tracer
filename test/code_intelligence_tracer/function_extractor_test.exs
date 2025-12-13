@@ -2,6 +2,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
   use ExUnit.Case, async: true
 
   alias CodeIntelligenceTracer.BeamReader
+  alias CodeIntelligenceTracer.ComplexityAnalyzer
   alias CodeIntelligenceTracer.FunctionExtractor
   import CodeIntelligenceTracer.TestHelpers
 
@@ -665,17 +666,17 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
   describe "compute_complexity/1" do
     test "simple expression has complexity 1" do
       ast = quote do: :ok
-      assert FunctionExtractor.compute_complexity(ast) == 1
+      assert ComplexityAnalyzer.compute_complexity(ast) == 1
     end
 
     test "if adds 1 to complexity" do
       ast = quote do: if(x > 0, do: :pos, else: :neg)
-      assert FunctionExtractor.compute_complexity(ast) == 2
+      assert ComplexityAnalyzer.compute_complexity(ast) == 2
     end
 
     test "unless adds 1 to complexity" do
       ast = quote do: unless(x == 0, do: :nonzero)
-      assert FunctionExtractor.compute_complexity(ast) == 2
+      assert ComplexityAnalyzer.compute_complexity(ast) == 2
     end
 
     test "case adds n-1 for n clauses" do
@@ -687,7 +688,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           _ -> 3
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "cond adds n-1 for n clauses" do
@@ -699,7 +700,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           true -> :zero
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "nested control structures add up" do
@@ -710,7 +711,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           :b -> 3
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "with adds 1 per match clause" do
@@ -721,7 +722,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           {:ok, a + b}
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "with else clauses add to complexity" do
@@ -734,18 +735,18 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           {:error, _} -> :error
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 4
+      assert ComplexityAnalyzer.compute_complexity(ast) == 4
     end
 
     test "boolean operators add 1 each" do
       # && and || each add 1
       ast = quote do: x && y || z
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "and/or operators add 1 each" do
       ast = quote do: x and y or z
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "try/rescue adds per rescue clause" do
@@ -758,7 +759,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
           RuntimeError -> :runtime_error
         end
       end
-      assert FunctionExtractor.compute_complexity(ast) == 3
+      assert ComplexityAnalyzer.compute_complexity(ast) == 3
     end
 
     test "all functions include complexity field" do

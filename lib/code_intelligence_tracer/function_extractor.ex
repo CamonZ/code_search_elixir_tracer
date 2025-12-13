@@ -1,5 +1,6 @@
 defmodule CodeIntelligenceTracer.FunctionExtractor do
   alias CodeIntelligenceTracer.AstNormalizer
+  alias CodeIntelligenceTracer.ComplexityAnalyzer
   alias CodeIntelligenceTracer.StringFormatting
   alias CodeIntelligenceTracer.Utils
 
@@ -73,7 +74,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
           ast_sha: String.t(),
           generated_by: String.t() | nil,
           macro_source: String.t() | nil,
-          complexity: non_neg_integer()
+          complexity: non_neg_integer(),
+          max_nesting_depth: non_neg_integer()
         }
 
   @doc """
@@ -178,7 +180,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
         ast_sha: compute_clause_ast_sha(clause),
         generated_by: format_generated_by(generated_by),
         macro_source: format_macro_source(macro_file_info),
-        complexity: compute_complexity(body)
+        complexity: ComplexityAnalyzer.compute_complexity(body),
+        max_nesting_depth: ComplexityAnalyzer.compute_max_nesting_depth(body)
       }
 
       {clause_key, clause_info}
@@ -205,100 +208,6 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   end
 
   defp format_macro_source(_other), do: nil
-
-  @doc """
-  Compute cyclomatic complexity of a function body AST.
-
-  Walks the AST and counts decision points to calculate complexity.
-  Base complexity is 1, with additional points for branching constructs.
-
-  ## Examples
-
-      iex> compute_complexity({:ok, [], nil})
-      1
-
-      iex> compute_complexity({:if, [], [condition, [do: a, else: b]]})
-      2
-
-  """
-  @spec compute_complexity(term()) :: non_neg_integer()
-  def compute_complexity(body_ast) do
-    {_ast, complexity} =
-      Macro.prewalk(body_ast, 1, fn node, acc ->
-        {node, acc + complexity_of(node)}
-      end)
-
-    complexity
-  end
-
-  # Calculate complexity contribution of a single AST node
-  # case: +1 for each clause beyond the first
-  defp complexity_of({:case, _meta, [_expr, [do: clauses]]}) when is_list(clauses) do
-    max(0, length(clauses) - 1)
-  end
-
-  # cond: +1 for each clause beyond the first
-  defp complexity_of({:cond, _meta, [[do: clauses]]}) when is_list(clauses) do
-    max(0, length(clauses) - 1)
-  end
-
-  # if/unless: +1 for the branch
-  defp complexity_of({op, _meta, _args}) when op in [:if, :unless] do
-    1
-  end
-
-  # with: +1 for each <- clause, +1 for each else clause
-  defp complexity_of({:with, _meta, args}) when is_list(args) do
-    # Count <- clauses (match operations)
-    match_clauses = Enum.count(args, fn
-      {:<-, _, _} -> true
-      _ -> false
-    end)
-
-    # Count else clauses if present
-    else_clauses = case List.last(args) do
-      [do: _, else: else_block] when is_list(else_block) -> length(else_block)
-      [else: else_block] when is_list(else_block) -> length(else_block)
-      _ -> 0
-    end
-
-    match_clauses + else_clauses
-  end
-
-  # try/rescue/catch: +1 for each rescue/catch clause
-  defp complexity_of({:try, _meta, [block_opts]}) when is_list(block_opts) do
-    rescue_count = case Keyword.get(block_opts, :rescue) do
-      nil -> 0
-      clauses when is_list(clauses) -> length(clauses)
-      _ -> 0
-    end
-
-    catch_count = case Keyword.get(block_opts, :catch) do
-      nil -> 0
-      clauses when is_list(clauses) -> length(clauses)
-      _ -> 0
-    end
-
-    rescue_count + catch_count
-  end
-
-  # receive: +1 for each clause beyond the first
-  defp complexity_of({:receive, _meta, [[do: clauses]]}) when is_list(clauses) do
-    max(0, length(clauses) - 1)
-  end
-
-  # receive with after: +1 for each clause beyond the first, +1 for after
-  defp complexity_of({:receive, _meta, [[do: clauses, after: _after]]}) when is_list(clauses) do
-    max(0, length(clauses) - 1) + 1
-  end
-
-  # Boolean operators (short-circuit): +1
-  defp complexity_of({op, _meta, [_left, _right]}) when op in [:and, :or, :&&, :||] do
-    1
-  end
-
-  # All other nodes: no complexity contribution
-  defp complexity_of(_node), do: 0
 
   # Extract guard expression from a single clause as string
   defp extract_guard([]), do: nil
