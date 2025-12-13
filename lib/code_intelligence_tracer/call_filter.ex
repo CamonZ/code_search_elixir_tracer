@@ -1,4 +1,6 @@
 defmodule CodeIntelligenceTracer.CallFilter do
+  alias CodeIntelligenceTracer.StdlibModules
+
   @moduledoc """
   Filters function calls to exclude stdlib and Erlang modules.
 
@@ -13,116 +15,6 @@ defmodule CodeIntelligenceTracer.CallFilter do
   - `should_include?/2` - Additionally filters to only include modules in a
     provided set of known project modules
   """
-
-  # Elixir standard library modules that are typically filtered out
-  @stdlib_modules MapSet.new([
-    # Core data types and collections
-    "Enum",
-    "Map",
-    "List",
-    "Keyword",
-    "String",
-    "Integer",
-    "Float",
-    "Tuple",
-    "MapSet",
-    "Range",
-    "Stream",
-    "Bitwise",
-    "Binary",
-
-    # IO and File operations
-    "File",
-    "IO",
-    "Path",
-    "StringIO",
-
-    # String/Data processing
-    "Regex",
-    "URI",
-    "Base",
-    "Inspect",
-    "Calendar",
-    "Version",
-
-    # Date/Time
-    "Date",
-    "DateTime",
-    "Time",
-    "NaiveDateTime",
-    "Calendar.ISO",
-
-    # Data access
-    "Access",
-
-    # Concurrency
-    "Agent",
-    "Task",
-    "Task.Supervisor",
-    "GenServer",
-    "Supervisor",
-    "DynamicSupervisor",
-    "Registry",
-    "Process",
-    "Node",
-    "Port",
-
-    # System/Runtime
-    "System",
-    "Code",
-    "Macro",
-    "Module",
-    "Application",
-    "Config",
-    "Config.Provider",
-    "Config.Reader",
-
-    # Core language
-    "Kernel",
-    "Kernel.SpecialForms",
-    "Protocol",
-    "Exception",
-    "Function",
-    "Atom",
-
-    # Protocols
-    "Collectable",
-    "Enumerable",
-    "Inspect",
-    "List.Chars",
-    "String.Chars",
-
-    # EEx templating
-    "EEx",
-    "EEx.Engine",
-
-    # Logging
-    "Logger",
-    "Logger.Formatter",
-
-    # Mix (build tool)
-    "Mix",
-    "Mix.Config",
-    "Mix.Project",
-    "Mix.Task",
-    "Mix.Shell",
-
-    # ExUnit (testing)
-    "ExUnit",
-    "ExUnit.Case",
-    "ExUnit.Assertions",
-    "ExUnit.Callbacks",
-
-    # IEx (interactive shell)
-    "IEx",
-    "IEx.Helpers",
-
-    # OptionParser
-    "OptionParser",
-
-    # Struct
-    "Struct"
-  ])
 
   @doc """
   Check if a callee module should be included in the call graph.
@@ -201,6 +93,8 @@ defmodule CodeIntelligenceTracer.CallFilter do
   @doc """
   Check if a module name is an Elixir stdlib module.
 
+  Delegates to `StdlibModules.stdlib_module?/1`.
+
   ## Examples
 
       iex> stdlib_module?("Enum")
@@ -212,7 +106,7 @@ defmodule CodeIntelligenceTracer.CallFilter do
   """
   @spec stdlib_module?(String.t()) :: boolean()
   def stdlib_module?(module_name) do
-    MapSet.member?(@stdlib_modules, module_name)
+    StdlibModules.stdlib_module?(module_name)
   end
 
   @doc """
@@ -250,8 +144,9 @@ defmodule CodeIntelligenceTracer.CallFilter do
   @doc """
   Returns the set of stdlib module names.
 
+  Delegates to `StdlibModules.stdlib_modules/0`.
   Useful for inspection or extending the filter list.
   """
   @spec stdlib_modules() :: MapSet.t()
-  def stdlib_modules, do: @stdlib_modules
+  def stdlib_modules, do: StdlibModules.stdlib_modules()
 end
