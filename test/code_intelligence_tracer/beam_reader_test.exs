@@ -2,6 +2,7 @@ defmodule CodeIntelligenceTracer.BeamReaderTest do
   use ExUnit.Case, async: true
 
   alias CodeIntelligenceTracer.BeamReader
+  import CodeIntelligenceTracer.TestHelpers
 
   describe "read_chunks/1" do
     test "reads chunks from valid BEAM file" do
@@ -233,9 +234,4 @@ defmodule CodeIntelligenceTracer.BeamReaderTest do
     end
   end
 
-  defp get_beam_path(module) do
-    module
-    |> :code.which()
-    |> to_string()
-  end
 end

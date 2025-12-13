@@ -3,6 +3,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
 
   alias CodeIntelligenceTracer.BeamReader
   alias CodeIntelligenceTracer.FunctionExtractor
+  import CodeIntelligenceTracer.TestHelpers
 
   describe "extract_functions/2" do
     test "extracts public function location" do
@@ -750,9 +751,4 @@ defmodule CodeIntelligenceTracer.FunctionExtractorTest do
     end
   end
 
-  defp get_beam_path(module) do
-    module
-    |> :code.which()
-    |> List.to_string()
-  end
 end
