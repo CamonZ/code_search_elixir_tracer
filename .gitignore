@@ -30,3 +30,5 @@ code_search_elixir_tracer
 !mix.lock
 
 samples/*
+
+scratch

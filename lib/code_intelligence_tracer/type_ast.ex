@@ -1,5 +1,6 @@
 defmodule CodeIntelligenceTracer.TypeAst do
   alias CodeIntelligenceTracer.StringFormatting
+  alias CodeIntelligenceTracer.Utils
 
   @moduledoc """
   Parse and format Elixir type AST nodes.
@@ -96,7 +97,7 @@ defmodule CodeIntelligenceTracer.TypeAst do
 
   # Remote type references (e.g., String.t())
   def parse({:remote_type, _, [{:atom, _, module}, {:atom, _, name}, args]}) do
-    module_string = module_to_elixir_string(module)
+    module_string = Utils.module_to_string(module)
 
     %{
       type: :type_ref,
@@ -292,12 +293,5 @@ defmodule CodeIntelligenceTracer.TypeAst do
 
   defp format_map_field(_) do
     "term() => term()"
-  end
-
-  # Convert Erlang module atom to Elixir module string
-  defp module_to_elixir_string(module) when is_atom(module) do
-    module
-    |> Atom.to_string()
-    |> String.replace_leading("Elixir.", "")
   end
 end

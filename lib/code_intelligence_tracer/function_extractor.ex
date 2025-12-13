@@ -1,6 +1,7 @@
 defmodule CodeIntelligenceTracer.FunctionExtractor do
   alias CodeIntelligenceTracer.AstNormalizer
   alias CodeIntelligenceTracer.StringFormatting
+  alias CodeIntelligenceTracer.Utils
 
   @moduledoc """
   Extracts function definitions with their locations from Elixir debug info.
@@ -188,9 +189,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   defp format_generated_by(nil), do: nil
 
   defp format_generated_by(module) when is_atom(module) do
-    module
-    |> Atom.to_string()
-    |> String.replace_leading("Elixir.", "")
+    Utils.module_to_string(module)
   end
 
   # Format the macro source location as "relative/path.ex:line" or nil
