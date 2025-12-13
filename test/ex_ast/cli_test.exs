@@ -165,7 +165,7 @@ defmodule ExAst.CLITest do
     test "prints usage information" do
       output = capture_io(fn -> CLI.print_help() end)
 
-      assert output =~ "Usage: call_graph"
+      assert output =~ "Usage: ex_ast"
       assert output =~ "--output"
       assert output =~ "--format"
       assert output =~ "--include-deps"
