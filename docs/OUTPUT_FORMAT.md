@@ -92,6 +92,7 @@ Array of function call records. Each call represents a function invoking another
 - `module` - The target module (same as caller module for local calls)
 - `function` - The function name being called
 - `arity` - The number of arguments in the call
+- `args` - Arguments captured as human-readable string (e.g., `"list, &transform/1"`, or empty string for zero-arity calls)
 
 ### `function_locations`
 Map of modules to their function clause definitions. Each clause of a multi-clause function is a separate entry, keyed by `"function_name/arity:line"`.
@@ -114,7 +115,8 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
       "ast_sha": "f6e5d4c3b2a1...",
       "generated_by": null,
       "macro_source": null,
-      "complexity": 3
+      "complexity": 3,
+      "max_nesting_depth": 2
     },
     "my_function/2:15": {
       "name": "my_function",
@@ -131,7 +133,8 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
       "ast_sha": "e5d4c3b2a1f6...",
       "generated_by": null,
       "macro_source": null,
-      "complexity": 2
+      "complexity": 2,
+      "max_nesting_depth": 1
     }
   }
 }
@@ -189,6 +192,14 @@ Complexity is calculated by counting decision points:
 - `try`/`rescue`/`catch`: +1 per rescue/catch clause
 - `receive` clauses: +1 per clause beyond the first
 - `and`/`or`/`&&`/`||`: +1 (short-circuit evaluation)
+
+**Max Nesting Depth field:**
+- `max_nesting_depth` - Maximum nesting depth of control structures (integer >= 0)
+
+Max nesting depth is calculated by tracking the deepest level of nested control structures:
+- Base depth: 0
+- Nesting-introducing constructs: `with`, `case`, `cond`, `if`, `unless`, `try`, `for`, `fn`
+- Each level of nesting increments the depth counter
 
 ### `specs`
 Map of modules to their `@spec` definitions.
@@ -298,7 +309,8 @@ A minimal example showing all sections:
       "callee": {
         "module": "MyApp.Greeter",
         "function": "format_name",
-        "arity": 1
+        "arity": 1,
+        "args": "name"
       }
     }
   ],
@@ -319,7 +331,8 @@ A minimal example showing all sections:
         "ast_sha": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         "generated_by": null,
         "macro_source": null,
-        "complexity": 2
+        "complexity": 2,
+        "max_nesting_depth": 1
       },
       "format_name/1:20": {
         "name": "format_name",
@@ -336,7 +349,8 @@ A minimal example showing all sections:
         "ast_sha": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
         "generated_by": null,
         "macro_source": null,
-        "complexity": 1
+        "complexity": 1,
+        "max_nesting_depth": 0
       }
     }
   },
@@ -438,6 +452,7 @@ extraction_metadata:
 calls[1]:
   - callee:
       arity: 1
+      args: name
       function: format_name
       module: MyApp.Greeter
     caller:
@@ -465,6 +480,7 @@ function_locations:
       generated_by: ~
       macro_source: ~
       complexity: 1
+      max_nesting_depth: 0
     greet/1:12:
       name: greet
       arity: 1
@@ -481,6 +497,7 @@ function_locations:
       generated_by: ~
       macro_source: ~
       complexity: 2
+      max_nesting_depth: 1
 specs:
   MyApp.Greeter[1]:
     - arity: 1
