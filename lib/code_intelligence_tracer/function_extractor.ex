@@ -243,18 +243,12 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   defp find_max_line(ast) do
     {_ast, max_line} =
       Macro.prewalk(ast, 0, fn node, acc ->
-        line = extract_line_from_node(node)
+        line = AstNormalizer.extract_line_from_node(node)
         {node, max(acc, line)}
       end)
 
     max_line
   end
-
-  defp extract_line_from_node({_form, meta, _args}) when is_list(meta) do
-    Keyword.get(meta, :line, 0)
-  end
-
-  defp extract_line_from_node(_), do: 0
 
   @doc """
   Compute SHA256 hash of source code for a function's line range.
@@ -315,7 +309,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   @spec compute_ast_sha(list()) :: String.t()
   def compute_ast_sha(clauses) do
     clauses
-    |> normalize_ast()
+    |> AstNormalizer.normalize_ast()
     |> :erlang.term_to_binary()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
@@ -334,7 +328,7 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
   @spec compute_clause_ast_sha(tuple()) :: String.t()
   def compute_clause_ast_sha(clause) do
     clause
-    |> normalize_ast()
+    |> AstNormalizer.normalize_ast()
     |> :erlang.term_to_binary()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
@@ -345,6 +339,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   Removes `:line`, `:column`, `:counter`, `:file`, and other position
   metadata from the AST while preserving semantic structure.
+
+  This is a delegation to `AstNormalizer.normalize_ast/1` for backward compatibility.
 
   ## Parameters
 
@@ -357,33 +353,8 @@ defmodule CodeIntelligenceTracer.FunctionExtractor do
 
   """
   @spec normalize_ast(term()) :: term()
-  def normalize_ast(ast) when is_list(ast) do
-    Enum.map(ast, &normalize_ast/1)
-  end
-
-  # Function clause tuple: {meta, args, guards, body}
-  def normalize_ast({meta, args, guards, body}) when is_list(meta) do
-    normalized_meta = strip_position_metadata(meta)
-    {normalized_meta, normalize_ast(args), normalize_ast(guards), normalize_ast(body)}
-  end
-
-  # Standard AST node: {form, meta, args}
-  def normalize_ast({form, meta, args}) when is_list(meta) do
-    normalized_meta = strip_position_metadata(meta)
-    normalized_args = normalize_ast(args)
-    {form, normalized_meta, normalized_args}
-  end
-
-  def normalize_ast({left, right}) do
-    {normalize_ast(left), normalize_ast(right)}
-  end
-
-  def normalize_ast(other), do: other
-
-  # Strip position-related metadata keys
-  defp strip_position_metadata(meta) do
-    meta
-    |> Keyword.drop([:line, :column, :counter, :file, :end_of_expression, :newlines, :closing, :do, :end])
+  def normalize_ast(ast) do
+    AstNormalizer.normalize_ast(ast)
   end
 
   # Convert absolute path to relative path

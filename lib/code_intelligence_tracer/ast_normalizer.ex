@@ -106,4 +106,71 @@ defmodule CodeIntelligenceTracer.AstNormalizer do
         {other, true}
     end)
   end
+
+  @doc """
+  Normalize AST by stripping non-semantic metadata.
+
+  Removes `:line`, `:column`, `:counter`, `:file`, and other position
+  metadata from the AST while preserving semantic structure.
+
+  ## Parameters
+
+    - `ast` - Any Elixir AST term
+
+  ## Examples
+
+      iex> normalize_ast({:foo, [line: 1, column: 5], [:arg]})
+      {:foo, [], [:arg]}
+
+  """
+  @spec normalize_ast(term()) :: term()
+  def normalize_ast(ast) when is_list(ast) do
+    Enum.map(ast, &normalize_ast/1)
+  end
+
+  # Function clause tuple: {meta, args, guards, body}
+  def normalize_ast({meta, args, guards, body}) when is_list(meta) do
+    normalized_meta = strip_position_metadata(meta)
+    {normalized_meta, normalize_ast(args), normalize_ast(guards), normalize_ast(body)}
+  end
+
+  # Standard AST node: {form, meta, args}
+  def normalize_ast({form, meta, args}) when is_list(meta) do
+    normalized_meta = strip_position_metadata(meta)
+    normalized_args = normalize_ast(args)
+    {form, normalized_meta, normalized_args}
+  end
+
+  def normalize_ast({left, right}) do
+    {normalize_ast(left), normalize_ast(right)}
+  end
+
+  def normalize_ast(other), do: other
+
+  @doc """
+  Extract line number from an AST node.
+
+  Returns the `:line` metadata value if present, otherwise 0.
+
+  ## Examples
+
+      iex> extract_line_from_node({:foo, [line: 42], []})
+      42
+
+      iex> extract_line_from_node({:foo, [], []})
+      0
+
+  """
+  @spec extract_line_from_node(term()) :: non_neg_integer()
+  def extract_line_from_node({_form, meta, _args}) when is_list(meta) do
+    Keyword.get(meta, :line, 0)
+  end
+
+  def extract_line_from_node(_), do: 0
+
+  # Strip position-related metadata keys
+  defp strip_position_metadata(meta) do
+    meta
+    |> Keyword.drop([:line, :column, :counter, :file, :end_of_expression, :newlines, :closing, :do, :end])
+  end
 end
