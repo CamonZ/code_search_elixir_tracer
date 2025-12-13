@@ -92,7 +92,6 @@ Array of function call records. Each call represents a function invoking another
 - `module` - The target module (same as caller module for local calls)
 - `function` - The function name being called
 - `arity` - The number of arguments in the call
-- `args` - Arguments captured as human-readable string (e.g., `"list, &transform/1"`, or empty string for zero-arity calls)
 
 ### `function_locations`
 Map of modules to their function clause definitions. Each clause of a multi-clause function is a separate entry, keyed by `"function_name/arity:line"`.
@@ -309,8 +308,7 @@ A minimal example showing all sections:
       "callee": {
         "module": "MyApp.Greeter",
         "function": "format_name",
-        "arity": 1,
-        "args": "name"
+        "arity": 1
       }
     }
   ],
@@ -452,7 +450,6 @@ extraction_metadata:
 calls[1]:
   - callee:
       arity: 1
-      args: name
       function: format_name
       module: MyApp.Greeter
     caller:
