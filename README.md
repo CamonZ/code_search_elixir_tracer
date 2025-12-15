@@ -16,7 +16,7 @@ Extract call graphs, function locations, specs, types, and struct definitions fr
 
 ## Requirements
 
-- Elixir 1.14+ with OTP 25+
+- Elixir 1.18+ with OTP 27+
 - Project must be compiled with debug info (default in dev)
 
 ## Installation
@@ -44,8 +44,9 @@ ex_ast [OPTIONS] [PATH]
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--output FILE` | `-o` | Output file path (default: `extracted_trace.json`) |
-| `--format FORMAT` | `-f` | Output format: `json` or `toon` (default: `json`) |
+| `--output FILE` | `-o` | Output file path (default: `extracted_trace.<format>`) |
+| `--format FORMAT` | `-F` | Output format: `json` or `toon` (default: `json`) |
+| `--file BEAM_FILE` | `-f` | Process specific BEAM file(s) instead of a project (repeatable) |
 | `--include-deps` | `-d` | Include all dependencies in analysis |
 | `--deps DEP1,DEP2` | | Include specific dependencies (comma-separated) |
 | `--env ENV` | `-e` | Mix environment to use (default: `dev`) |
@@ -71,6 +72,12 @@ ex_ast --deps phoenix,ecto
 
 # Use test environment
 ex_ast -e test
+
+# Analyze a single BEAM file
+ex_ast -f path/to/Module.beam
+
+# Analyze multiple BEAM files
+ex_ast -f A.beam -f B.beam
 ```
 
 ## Output Format
@@ -107,11 +114,17 @@ See [docs/OUTPUT_FORMAT.md](docs/OUTPUT_FORMAT.md) for the complete output schem
 
 ## How It Works
 
+### Project Mode (default)
 1. Locates compiled BEAM files in `_build/<env>/lib/`
 2. Reads debug info chunks from each BEAM file
 3. Extracts function definitions, calls, specs, types, and structs
 4. Filters calls to only include project modules (unless `--include-deps`)
-5. Outputs structured JSON
+5. Outputs structured JSON or TOON
+
+### File Mode (`--file`)
+1. Processes specified BEAM file(s) directly
+2. No project context required - useful for analyzing individual modules
+3. Extracts all available information without filtering
 
 ## Documentation
 
