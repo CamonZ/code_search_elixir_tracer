@@ -133,8 +133,8 @@ defmodule ExAst.Extractor.SpecExtractor do
           spec: %{
             kind: :spec,
             line: 9,
-            inputs_string: ["integer()"],
-            return_string: "atom()",
+            input_strings: ["integer()"],
+            return_strings: ["atom()"],
             full: "@spec foo(integer()) :: atom()"
           }
         }
@@ -174,8 +174,8 @@ defmodule ExAst.Extractor.SpecExtractor do
     %{
       kind: kind,
       line: line,
-      inputs_string: clause.inputs_string,
-      return_string: clause.return_string,
+      input_strings: clause.input_strings,
+      return_strings: clause.return_strings,
       full: clause.full
     }
   end
@@ -184,8 +184,8 @@ defmodule ExAst.Extractor.SpecExtractor do
     %{
       kind: kind,
       line: line,
-      inputs_string: [],
-      return_string: "any()",
+      input_strings: [],
+      return_strings: ["any()"],
       full: ""
     }
   end

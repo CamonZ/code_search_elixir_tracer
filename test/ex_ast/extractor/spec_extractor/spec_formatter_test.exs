@@ -28,8 +28,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
       assert length(result.clauses) == 1
 
       [clause] = result.clauses
-      assert clause.inputs_string == ["integer()"]
-      assert clause.return_string == "atom()"
+      assert clause.input_strings == ["integer()"]
+      assert clause.return_strings == ["atom()"]
       assert clause.full == "@spec foo(integer()) :: atom()"
     end
 
@@ -57,12 +57,41 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
       [clause] = result.clauses
       assert clause.full == "@callback handle_call(term(), term()) :: term()"
     end
+
+    test "formats spec with union return type into separate strings" do
+      # @spec bar(integer()) :: atom() | binary() | :error
+      spec = %{
+        name: :bar,
+        arity: 1,
+        kind: :spec,
+        line: 10,
+        clauses: [
+          {:type, {10, 9}, :fun,
+           [
+             {:type, {10, 9}, :product, [{:type, {10, 18}, :integer, []}]},
+             {:type, {10, 30}, :union,
+              [
+                {:type, {10, 30}, :atom, []},
+                {:type, {10, 40}, :binary, []},
+                {:atom, {10, 50}, :error}
+              ]}
+           ]}
+        ]
+      }
+
+      result = SpecFormatter.format_spec(spec)
+
+      [clause] = result.clauses
+      assert clause.input_strings == ["integer()"]
+      assert clause.return_strings == ["atom()", "binary()", ":error"]
+      assert clause.full == "@spec bar(integer()) :: atom() | binary() | :error"
+    end
   end
 
   describe "format_spec/1 with real BEAM data" do
     test "formats specs from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
       specs = ExAst.Extractor.SpecExtractor.extract_specs(chunks)
@@ -72,8 +101,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
       formatted = SpecFormatter.format_spec(new_spec)
 
       [clause] = formatted.clauses
-      assert clause.inputs_string == []
-      assert clause.return_string == "t()"
+      assert clause.input_strings == []
+      assert clause.return_strings == ["t()"]
       assert clause.full == "@spec new() :: t()"
 
       # Format record_success/6 spec (has default args so spec is arity 6)
@@ -82,7 +111,7 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
 
       [clause] = formatted.clauses
 
-      assert clause.inputs_string == [
+      assert clause.input_strings == [
                "t()",
                "non_neg_integer()",
                "non_neg_integer()",
@@ -91,7 +120,7 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatterTest do
                "non_neg_integer()"
              ]
 
-      assert clause.return_string == "t()"
+      assert clause.return_strings == ["t()"]
 
       assert clause.full ==
                "@spec record_success(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()"

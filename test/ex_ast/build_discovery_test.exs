@@ -36,7 +36,7 @@ defmodule ExAst.BuildDiscoveryTest do
 
       assert is_list(apps)
       # Our own app should be in the list
-      assert Enum.any?(apps, fn {app_name, _path} -> app_name == "code_search_elixir_tracer" end)
+      assert Enum.any?(apps, fn {app_name, _path} -> app_name == "ex_ast" end)
 
       # Each entry should have a valid ebin path
       Enum.each(apps, fn {app_name, ebin_path} ->
@@ -152,7 +152,7 @@ defmodule ExAst.BuildDiscoveryTest do
   describe "find_project_apps/1" do
     test "finds app name for regular project" do
       project_path = File.cwd!()
-      assert {:ok, ["code_search_elixir_tracer"]} = BuildDiscovery.find_project_apps(project_path)
+      assert {:ok, ["ex_ast"]} = BuildDiscovery.find_project_apps(project_path)
     end
 
     test "finds all app names for umbrella project" do
@@ -212,7 +212,7 @@ defmodule ExAst.BuildDiscoveryTest do
       project_path = File.cwd!()
       mix_exs_path = Path.join(project_path, "mix.exs")
 
-      assert {:ok, "code_search_elixir_tracer"} = BuildDiscovery.parse_app_name(mix_exs_path)
+      assert {:ok, "ex_ast"} = BuildDiscovery.parse_app_name(mix_exs_path)
     end
 
     test "returns error for nonexistent file" do
@@ -238,7 +238,7 @@ defmodule ExAst.BuildDiscoveryTest do
     test "finds BEAM files in populated ebin" do
       project_path = File.cwd!()
       {:ok, build_lib_path} = BuildDiscovery.find_build_dir(project_path, "dev")
-      ebin_path = Path.join([build_lib_path, "code_search_elixir_tracer", "ebin"])
+      ebin_path = Path.join([build_lib_path, "ex_ast", "ebin"])
 
       beam_files = BuildDiscovery.find_beam_files(ebin_path)
 

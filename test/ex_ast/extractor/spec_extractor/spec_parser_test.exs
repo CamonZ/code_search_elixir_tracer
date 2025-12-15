@@ -182,7 +182,7 @@ defmodule ExAst.Extractor.SpecExtractor.SpecParserTest do
   describe "extract_specs/1 with real BEAM files" do
     test "extracts specs from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
       specs = SpecParser.extract_specs(chunks)
@@ -286,7 +286,7 @@ defmodule ExAst.Extractor.SpecExtractor.SpecParserTest do
   describe "parse_spec_clause/1 with real BEAM data" do
     test "parses clauses from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
       specs = SpecParser.extract_specs(chunks)

@@ -189,7 +189,7 @@ defmodule ExAst.Extractor.SpecExtractorTest do
   describe "correlate_specs/2 with real BEAM data" do
     test "correlates specs with functions from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
       {:ok, debug_info} = ExAst.BeamReader.extract_debug_info(chunks, ExAst.Stats)
@@ -215,7 +215,7 @@ defmodule ExAst.Extractor.SpecExtractorTest do
 
       assert record_success_6.spec != nil
 
-      assert record_success_6.spec.inputs_string == [
+      assert record_success_6.spec.input_strings == [
                "t()",
                "non_neg_integer()",
                "non_neg_integer()",
@@ -339,7 +339,7 @@ defmodule ExAst.Extractor.SpecExtractorTest do
   describe "extract_types/1 with real BEAM data" do
     test "extracts types from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {_module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
       types = SpecExtractor.extract_types(chunks)

@@ -13,8 +13,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
   @type formatted_clause :: %{
           inputs: [TypeAst.type_ast()],
           return: TypeAst.type_ast(),
-          inputs_string: [String.t()],
-          return_string: String.t(),
+          input_strings: [String.t()],
+          return_strings: [String.t()],
           full: String.t()
         }
 
@@ -37,8 +37,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
           %{
             inputs: [...],
             return: ...,
-            inputs_string: ["integer()"],
-            return_string: "atom()",
+            input_strings: ["integer()"],
+            return_strings: ["atom()"],
             full: "@spec foo(integer()) :: atom()"
           }
         ]
@@ -74,18 +74,24 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
   @spec format_clause(tuple(), atom(), :spec | :callback) :: formatted_clause()
   def format_clause(clause, name, kind) do
     parsed = SpecParser.parse_spec_clause(clause)
-    inputs_string = Enum.map(parsed.inputs, &TypeAst.format/1)
-    return_string = TypeAst.format(parsed.return)
+    input_strings = Enum.map(parsed.inputs, &TypeAst.format/1)
+
+    return_strings =
+      case parsed.return do
+        %{type: :union, types: types} -> Enum.map(types, &TypeAst.format/1)
+        other -> [TypeAst.format(other)]
+      end
 
     prefix = if kind == :callback, do: "@callback", else: "@spec"
-    inputs_joined = StringFormatting.join_map(inputs_string, ", ", &Function.identity/1)
-    full = "#{prefix} #{name}(#{inputs_joined}) :: #{return_string}"
+    inputs_joined = StringFormatting.join_map(input_strings, ", ", &Function.identity/1)
+    return_joined = Enum.join(return_strings, " | ")
+    full = "#{prefix} #{name}(#{inputs_joined}) :: #{return_joined}"
 
     %{
       inputs: parsed.inputs,
       return: parsed.return,
-      inputs_string: inputs_string,
-      return_string: return_string,
+      input_strings: input_strings,
+      return_strings: return_strings,
       full: full
     }
   end
@@ -96,8 +102,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
     %{
       kind: kind,
       line: line,
-      inputs_string: clause.inputs_string,
-      return_string: clause.return_string,
+      input_strings: clause.input_strings,
+      return_strings: clause.return_strings,
       full: clause.full
     }
   end
@@ -106,8 +112,8 @@ defmodule ExAst.Extractor.SpecExtractor.SpecFormatter do
     %{
       kind: kind,
       line: line,
-      inputs_string: [],
-      return_string: "any()",
+      input_strings: [],
+      return_strings: ["any()"],
       full: ""
     }
   end

@@ -211,8 +211,8 @@ defmodule ExAst.Output do
 
   defp format_spec_clause(clause) do
     %{
-      inputs_string: clause.inputs_string,
-      return_string: clause.return_string,
+      input_strings: clause.input_strings,
+      return_strings: clause.return_strings,
       full: clause.full
     }
   end

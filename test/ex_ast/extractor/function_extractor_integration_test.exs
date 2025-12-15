@@ -7,7 +7,7 @@ defmodule ExAst.Extractor.FunctionExtractorIntegrationTest do
   # Helper to get BEAM file path for a module
   defp get_beam_path(module) do
     module_path = module |> Module.split() |> Enum.join(".")
-    "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.#{module_path}.beam"
+    "_build/dev/lib/ex_ast/ebin/Elixir.#{module_path}.beam"
   end
 
   describe "extract_functions/2 with macro-generated functions" do

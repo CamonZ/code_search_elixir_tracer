@@ -202,7 +202,7 @@ defmodule ExAst.BeamReaderTest do
         ExAst.BuildDiscovery.find_build_dir(project_path, "dev")
 
       app_dirs = [
-        {"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}
+        {"ex_ast", Path.join(build_lib_path, "ex_ast/ebin")}
       ]
 
       modules = BeamReader.collect_modules_from_apps(app_dirs)
@@ -221,7 +221,7 @@ defmodule ExAst.BeamReaderTest do
 
       # Our project only has one app, but test the structure
       app_dirs = [
-        {"code_search_elixir_tracer", Path.join(build_lib_path, "code_search_elixir_tracer/ebin")}
+        {"ex_ast", Path.join(build_lib_path, "ex_ast/ebin")}
       ]
 
       modules = BeamReader.collect_modules_from_apps(app_dirs)

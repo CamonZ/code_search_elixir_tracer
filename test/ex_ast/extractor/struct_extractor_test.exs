@@ -78,7 +78,7 @@ defmodule ExAst.Extractor.StructExtractorTest do
   describe "extract_struct/1 with real BEAM data" do
     test "extracts struct from Stats module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.Extractor.Stats.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.Extractor.Stats.beam"
 
       {:ok, {module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
 
@@ -105,7 +105,7 @@ defmodule ExAst.Extractor.StructExtractorTest do
 
     test "returns nil for non-struct module" do
       beam_path =
-        "_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.CLI.beam"
+        "_build/dev/lib/ex_ast/ebin/Elixir.ExAst.CLI.beam"
 
       {:ok, {module, chunks}} = ExAst.BeamReader.read_chunks(beam_path)
 

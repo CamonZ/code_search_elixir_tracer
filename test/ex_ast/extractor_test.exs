@@ -15,10 +15,10 @@ defmodule ExAst.ExtractorTest do
       assert {:ok, %Extractor{} = result} = Extractor.run(options)
 
       assert result.project_type == :regular
-      assert result.project_apps == ["code_search_elixir_tracer"]
+      assert result.project_apps == ["ex_ast"]
       assert String.ends_with?(result.build_dir, "_build/dev/lib")
       assert is_list(result.apps)
-      assert Enum.any?(result.apps, fn {name, _} -> name == "code_search_elixir_tracer" end)
+      assert Enum.any?(result.apps, fn {name, _} -> name == "ex_ast" end)
 
       assert is_list(result.calls)
       assert is_map(result.function_locations)
@@ -152,7 +152,7 @@ defmodule ExAst.ExtractorTest do
   # Find a BEAM file from this project to use in tests
   defp find_project_beam_file do
     build_dir =
-      Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
+      Path.join([File.cwd!(), "_build", "dev", "lib", "ex_ast", "ebin"])
 
     build_dir
     |> File.ls!()
@@ -163,7 +163,7 @@ defmodule ExAst.ExtractorTest do
   # Find multiple BEAM files from this project to use in tests
   defp find_multiple_project_beam_files(count) do
     build_dir =
-      Path.join([File.cwd!(), "_build", "dev", "lib", "code_search_elixir_tracer", "ebin"])
+      Path.join([File.cwd!(), "_build", "dev", "lib", "ex_ast", "ebin"])
 
     build_dir
     |> File.ls!()

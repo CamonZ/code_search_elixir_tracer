@@ -14,7 +14,7 @@ defmodule ExAst.TestHelpers do
       "/path/to/erlang/lib/stdlib-*/ebin/enum.beam"
 
       iex> get_beam_path(ExAst.BeamReader)
-      "/path/to/project/_build/dev/lib/code_search_elixir_tracer/ebin/Elixir.ExAst.BeamReader.beam"
+      "/path/to/project/_build/dev/lib/ex_ast/ebin/Elixir.ExAst.BeamReader.beam"
 
   """
   @spec get_beam_path(module()) :: String.t()
