@@ -229,7 +229,7 @@ Map of modules to their `@spec` definitions.
       "line": 9,
       "clauses": [
         {
-          "inputs_string": "String.t(), integer()",
+          "inputs_string": ["String.t()", "integer()"],
           "return_string": "{:ok, term()} | {:error, String.t()}",
           "full": "@spec my_function(String.t(), integer()) :: {:ok, term()} | {:error, String.t()}"
         }
@@ -385,7 +385,7 @@ A minimal example showing all sections:
         "line": 11,
         "clauses": [
           {
-            "inputs_string": "String.t()",
+            "inputs_string": ["String.t()"],
             "return_string": "String.t()",
             "full": "@spec greet(String.t()) :: String.t()"
           }

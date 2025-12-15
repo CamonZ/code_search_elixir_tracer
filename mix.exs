@@ -1,9 +1,9 @@
-defmodule CodeSearchElixirTracer.MixProject do
+defmodule ExAst.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :code_search_elixir_tracer,
+      app: :ex_ast,
       version: "0.1.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
