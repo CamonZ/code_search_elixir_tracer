@@ -53,34 +53,69 @@ Statistics about the extraction process:
   "total_functions": 456,
   "total_specs": 120,
   "total_types": 30,
-  "total_structs": 15
+  "total_structs": 15,
+  "extraction_time_ms": 47
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `modules_processed` | integer | Total number of BEAM modules analyzed |
+| `modules_with_debug_info` | integer | Modules with extractable debug info |
+| `modules_without_debug_info` | integer | Modules missing debug info (compiled without `:debug_info`) |
+| `total_calls` | integer | Total function calls extracted |
+| `total_functions` | integer | Total function clauses extracted |
+| `total_specs` | integer | Total `@spec` definitions extracted |
+| `total_types` | integer | Total `@type`/`@opaque` definitions extracted |
+| `total_structs` | integer | Total struct definitions extracted |
+| `extraction_time_ms` | integer | Time taken for extraction in milliseconds |
 
 ### `calls`
 Array of function call records. Each call represents a function invoking another function. This includes direct function calls and function captures.
 
 ```json
 {
-  "type": "local|remote",
+  "type": "local",
   "caller": {
     "module": "MyApp.Module",
     "function": "my_function/2",
-    "kind": "def|defp|defmacro|defmacrop",
+    "kind": "def",
     "file": "/path/to/source.ex",
     "line": 42
   },
   "callee": {
-    "module": "OtherModule",
-    "function": "other_function",
-    "arity": 2
+    "module": "MyApp.Module",
+    "function": "helper_function",
+    "arity": 1
   }
 }
 ```
 
-**Call types:**
-- `local` - Call to a function in the same module
-- `remote` - Call to a function in a different module
+**Call record fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | `"local"` (same module) or `"remote"` (different module) |
+| `caller` | object | Information about the calling function |
+| `callee` | object | Information about the called function |
+
+**Caller fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `module` | string | Module containing the caller |
+| `function` | string | Function name with arity (e.g., `"my_function/2"`) |
+| `kind` | string | `"def"`, `"defp"`, `"defmacro"`, or `"defmacrop"` |
+| `file` | string | Absolute path to source file |
+| `line` | integer | Line number where the call occurs |
+
+**Callee fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `module` | string | Target module (same as caller module for local calls) |
+| `function` | string | Function name being called |
+| `arity` | integer | Number of arguments in the call |
 
 **Function Captures:**
 Function captures (e.g., `&Module.function/arity` and `&function/arity`) are included in the calls array with the same structure as regular function calls. They are identified by the line number of the capture expression.
@@ -91,17 +126,6 @@ The following are excluded from the calls array:
 - Operators (`=`, `==`, `+`, `-`, `*`, `/`, `and`, `or`, `&&`, `||`, etc.)
 - Module directives (`import`, `require`, `alias`, `use`, `def`, `defp`, etc.)
 - Language features (`::`, `->`, `<-`, `:=`, `@`, `&` when not used as function capture)
-
-**Caller kinds:**
-- `def` - Public function
-- `defp` - Private function
-- `defmacro` - Public macro
-- `defmacrop` - Private macro
-
-**Callee fields:**
-- `module` - The target module (same as caller module for local calls)
-- `function` - The function name being called
-- `arity` - The number of arguments in the call
 
 ### `function_locations`
 Map of modules to their function clause definitions. Each clause of a multi-clause function is a separate entry, keyed by `"function_name/arity:line"`.
@@ -149,15 +173,26 @@ Map of modules to their function clause definitions. Each clause of a multi-clau
 }
 ```
 
-**Clause fields:**
-- `name` - Function name without arity (e.g., `"my_function"`)
-- `arity` - Number of arguments as integer
-- `line` - Line number where this clause is defined
-- `start_line` - Start line of the clause (same as `line`)
-- `end_line` - End line of the clause (computed from AST body)
-- `kind` - Function kind (`def`, `defp`, `defmacro`, `defmacrop`)
-- `guard` - Guard expression as string, or `null` if no guard
-- `pattern` - Function arguments as human-readable string (e.g., `"x, y"`, `"{:ok, value}"`)
+**Function clause fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Function name without arity |
+| `arity` | integer | Number of arguments |
+| `line` | integer | Line number where clause is defined |
+| `start_line` | integer | Start line of the clause (same as `line`) |
+| `end_line` | integer | End line of the clause (computed from AST body) |
+| `kind` | string | `"def"`, `"defp"`, `"defmacro"`, or `"defmacrop"` |
+| `guard` | string or null | Guard expression as string, or `null` if no guard |
+| `pattern` | string | Function arguments as human-readable string |
+| `source_file` | string | Relative path to source file |
+| `source_file_absolute` | string | Absolute path to source file |
+| `source_sha` | string or null | SHA256 hash of source code (null if unavailable) |
+| `ast_sha` | string | SHA256 hash of normalized AST |
+| `generated_by` | string or null | Module that generated this function, or `null` |
+| `macro_source` | string or null | Library location where macro is defined, or `null` |
+| `complexity` | integer | Cyclomatic complexity (>= 1) |
+| `max_nesting_depth` | integer | Maximum nesting depth of control structures (>= 0) |
 
 **Guard examples:**
 ```json
@@ -229,14 +264,37 @@ Map of modules to their `@spec` definitions.
       "line": 9,
       "clauses": [
         {
-          "inputs_string": ["String.t()", "integer()"],
-          "return_string": "{:ok, term()} | {:error, String.t()}",
+          "input_strings": ["String.t()", "integer()"],
+          "return_strings": ["{:ok, term()}", "{:error, String.t()}"],
           "full": "@spec my_function(String.t(), integer()) :: {:ok, term()} | {:error, String.t()}"
         }
       ]
     }
   ]
 }
+```
+
+**Spec fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Function name |
+| `arity` | integer | Number of arguments |
+| `kind` | string | `"spec"` or `"callback"` |
+| `line` | integer | Line number where spec is defined |
+| `clauses` | array | List of spec clauses (most specs have one) |
+
+**Clause fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `input_strings` | array of strings | Each input type as a formatted string |
+| `return_strings` | array of strings | Each return type as a formatted string (union types are split) |
+| `full` | string | Complete spec as it would appear in source code |
+
+**Note on `return_strings`:** Union return types are split into individual strings. For example, a spec returning `atom() | binary() | :error` produces:
+```json
+"return_strings": ["atom()", "binary()", ":error"]
 ```
 
 **Spec kinds:**
@@ -251,7 +309,7 @@ Map of modules to their `@type` and `@opaque` definitions.
   "MyApp.Module": [
     {
       "name": "my_type",
-      "kind": "type|typep|opaque",
+      "kind": "type",
       "params": ["t"],
       "line": 5,
       "definition": "@type my_type(t) :: %{value: t, count: integer()}"
@@ -260,10 +318,20 @@ Map of modules to their `@type` and `@opaque` definitions.
 }
 ```
 
+**Type fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Type name |
+| `kind` | string | `"type"`, `"typep"`, or `"opaque"` |
+| `params` | array of strings | Type parameters (empty array if none) |
+| `line` | integer | Line number where type is defined |
+| `definition` | string | Complete type definition as it would appear in source |
+
 **Type kinds:**
-- `type` - Public type
-- `typep` - Private type
-- `opaque` - Opaque type
+- `type` - Public type (`@type`)
+- `typep` - Private type (`@typep`)
+- `opaque` - Opaque type (`@opaque`)
 
 ### `structs`
 Map of modules to their struct definitions. Only modules that define structs are included.
@@ -292,10 +360,19 @@ Map of modules to their struct definitions. Only modules that define structs are
 }
 ```
 
-**Struct field information:**
-- `field` - Field name as string
-- `default` - Default value as string representation (e.g., `"nil"`, `"0"`, `"[]"`)
-- `required` - Always `false` in current implementation (see note below)
+**Struct fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fields` | array | List of field definitions |
+
+**Field properties:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `field` | string | Field name |
+| `default` | string | Default value as string representation (e.g., `"nil"`, `"0"`, `"[]"`) |
+| `required` | boolean | Always `false` (see note below) |
 
 **Note on `@enforce_keys`:**
 The `@enforce_keys` directive information is not preserved in BEAM debug info as it's only used at compile time. Therefore, the `required` field is always `false`. To determine which fields are enforced at runtime, you would need to inspect the source code directly.
@@ -317,7 +394,8 @@ A minimal example showing all sections:
     "total_functions": 4,
     "total_specs": 2,
     "total_types": 1,
-    "total_structs": 1
+    "total_structs": 1,
+    "extraction_time_ms": 15
   },
   "calls": [
     {
@@ -385,8 +463,8 @@ A minimal example showing all sections:
         "line": 11,
         "clauses": [
           {
-            "inputs_string": ["String.t()"],
-            "return_string": "String.t()",
+            "input_strings": ["String.t()"],
+            "return_strings": ["String.t()"],
             "full": "@spec greet(String.t()) :: String.t()"
           }
         ]
@@ -471,6 +549,7 @@ extraction_metadata:
   total_specs: 2
   total_types: 1
   total_structs: 1
+  extraction_time_ms: 15
 calls[1]:
   - callee:
       arity: 1
@@ -524,8 +603,8 @@ specs:
     - arity: 1
       clauses[1]:
         - full: "@spec greet(String.t()) :: String.t()"
-          inputs_string: String.t()
-          return_string: String.t()
+          input_strings[1]: String.t()
+          return_strings[1]: String.t()
       kind: spec
       line: 11
       name: greet
