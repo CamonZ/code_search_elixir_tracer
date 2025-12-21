@@ -147,6 +147,55 @@ defmodule ExAst.ExtractorTest do
       assert {:error, message} = Extractor.run(%{files: ["/some/path/module.ex"]})
       assert message =~ ".beam extension"
     end
+
+    test "handles function key collisions from multiple modules" do
+      # This test verifies that when two modules have functions with the same
+      # name/arity at the same line number, both are extracted without collision.
+      # This can happen when modules have identical structure (same line numbers).
+
+      beam_files = [
+        find_beam_file("CollisionModuleA"),
+        find_beam_file("CollisionModuleB")
+      ]
+
+      # Run extraction multiple times to catch race conditions
+      results = for _ <- 1..5 do
+        {:ok, result} = Extractor.run(%{files: beam_files})
+        result
+      end
+
+      # All runs should extract the same number of functions
+      # function_locations is a flat map with keys prefixed by module name
+      function_counts = Enum.map(results, fn r ->
+        map_size(r.function_locations)
+      end)
+
+      # Should have 4 functions total (2 per module)
+      assert Enum.all?(function_counts, &(&1 == 4)),
+        "Expected 4 functions in all runs, got: #{inspect(function_counts)}"
+
+      # Verify both modules have their functions
+      result = hd(results)
+
+      # Group by module to verify both are present
+      by_module = Enum.group_by(result.function_locations, fn {_key, info} -> info.module end)
+
+      assert Map.has_key?(by_module, "CollisionModuleA")
+      assert Map.has_key?(by_module, "CollisionModuleB")
+
+      # Verify both modules have 2 functions each
+      assert length(by_module["CollisionModuleA"]) == 2
+      assert length(by_module["CollisionModuleB"]) == 2
+
+      # Verify both modules have their first_function (the one that would collide)
+      module_a_keys = Enum.map(by_module["CollisionModuleA"], fn {key, _} -> key end)
+      module_b_keys = Enum.map(by_module["CollisionModuleB"], fn {key, _} -> key end)
+
+      assert Enum.any?(module_a_keys, &String.contains?(&1, "first_function/0")),
+        "CollisionModuleA missing first_function/0"
+      assert Enum.any?(module_b_keys, &String.contains?(&1, "first_function/0")),
+        "CollisionModuleB missing first_function/0"
+    end
   end
 
   # Find a BEAM file from this project to use in tests
@@ -170,5 +219,13 @@ defmodule ExAst.ExtractorTest do
     |> Enum.filter(&String.ends_with?(&1, ".beam"))
     |> Enum.take(count)
     |> Enum.map(&Path.join(build_dir, &1))
+  end
+
+  # Find a specific BEAM file by module name (for test environment)
+  defp find_beam_file(module_name) do
+    build_dir =
+      Path.join([File.cwd!(), "_build", "test", "lib", "ex_ast", "ebin"])
+
+    Path.join(build_dir, "Elixir.#{module_name}.beam")
   end
 end

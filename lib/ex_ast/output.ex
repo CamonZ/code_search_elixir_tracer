@@ -160,7 +160,15 @@ defmodule ExAst.Output do
   defp format_function_locations(locations) do
     locations
     |> Enum.group_by(fn {_func_key, info} -> info.module end, fn {func_key, info} ->
-      {func_key, format_function_info(info)}
+      # Strip module prefix from key (added to ensure uniqueness)
+      # Key format is "ModuleName.function/arity:line", we want "function/arity:line"
+      stripped_key =
+        case String.split(func_key, ".", parts: 2) do
+          [_module, rest] -> rest
+          [key] -> key
+        end
+
+      {stripped_key, format_function_info(info)}
     end)
     |> Enum.into(%{}, fn {module, funcs} ->
       {module, Map.new(funcs)}
