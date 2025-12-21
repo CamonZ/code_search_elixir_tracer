@@ -99,6 +99,7 @@ defmodule ExAst.Extractor.CallExtractor do
     :|>,
     :<<>>,
     :"::",
+    :%,
     :%{},
     :{},
     :when,

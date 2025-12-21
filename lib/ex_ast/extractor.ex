@@ -86,7 +86,9 @@ defmodule ExAst.Extractor do
         build_dir: build_dir,
         environment: nil,
         apps: [],
-        known_modules: MapSet.new()
+        # Use nil for file mode to avoid strict filtering - we want all calls
+        # except stdlib/Erlang, not just calls within the processed modules
+        known_modules: nil
       }
 
       run_extraction(absolute_paths, context)
@@ -252,6 +254,7 @@ defmodule ExAst.Extractor do
       specs =
         chunks
         |> SpecExtractor.extract_specs()
+        |> Enum.reject(&(&1.name == :__info__))
         |> Enum.map(&SpecExtractor.format_spec/1)
 
       # Extract types
@@ -265,13 +268,16 @@ defmodule ExAst.Extractor do
   end
 
   # Add module name to each function location for grouping in output
+  # Also prefixes the key with module name to prevent collisions across modules
   @spec add_module_to_locations(map(), atom()) :: map()
   defp add_module_to_locations(functions, module) do
     module_string = Utils.module_to_string(module)
 
     functions
     |> Enum.into(%{}, fn {func_key, info} ->
-      {func_key, Map.put(info, :module, module_string)}
+      # Prefix key with module to ensure uniqueness across modules
+      unique_key = "#{module_string}.#{func_key}"
+      {unique_key, Map.put(info, :module, module_string)}
     end)
   end
 end

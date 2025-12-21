@@ -186,6 +186,29 @@ defmodule ExAst.Extractor.CallExtractorTest do
       refute "=" in function_names
     end
 
+    test "excludes struct creation from calls" do
+      # Struct creation using % operator should not be extracted as a function call
+      # AST for: %MyStruct{field: value}
+      definitions = [
+        {{:create_struct, 0}, :def, [line: 1],
+         [
+           {[line: 2], [], [],
+            {:%, [line: 3],
+             [
+               {:__aliases__, [line: 3], [:MyStruct]},
+               {:%{}, [line: 3], [field: {:value, [line: 3], nil}]}
+             ]}}
+         ]}
+      ]
+
+      calls = CallExtractor.extract_calls(definitions, MyApp.Foo, "lib/my_app/foo.ex")
+
+      # Should not include % operator as a function call
+      function_names = Enum.map(calls, & &1.callee.function)
+      refute "%" in function_names, "Struct creation (% operator) should not be extracted as a function call"
+      assert length(calls) == 0, "Expected no calls but got: #{inspect(calls)}"
+    end
+
     test "handles multiple clauses in function" do
       definitions = [
         {{:multi_clause, 1}, :def, [line: 1],
