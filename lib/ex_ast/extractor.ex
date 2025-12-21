@@ -252,6 +252,7 @@ defmodule ExAst.Extractor do
       specs =
         chunks
         |> SpecExtractor.extract_specs()
+        |> Enum.reject(&(&1.name == :__info__))
         |> Enum.map(&SpecExtractor.format_spec/1)
 
       # Extract types

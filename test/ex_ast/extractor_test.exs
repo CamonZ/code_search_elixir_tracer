@@ -138,6 +138,20 @@ defmodule ExAst.ExtractorTest do
       assert map_size(result.types) == 1
     end
 
+    test "excludes __info__ specs from extraction" do
+      beam_file = find_project_beam_file()
+
+      assert {:ok, result} = Extractor.run(%{files: [beam_file]})
+
+      # Get the specs for the module
+      [{_module_name, module_specs}] = Map.to_list(result.specs)
+
+      # Verify no spec has name "__info__"
+      refute Enum.any?(module_specs, fn spec ->
+        spec[:name] == "__info__" || spec[:name] == :__info__
+      end), "Expected __info__ spec to be excluded from exported specs"
+    end
+
     test "returns error for missing file" do
       assert {:error, message} = Extractor.run(%{files: ["/nonexistent/Module.beam"]})
       assert message =~ "BEAM file not found"
