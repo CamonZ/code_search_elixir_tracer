@@ -210,6 +210,41 @@ defmodule ExAst.ExtractorTest do
       assert Enum.any?(module_b_keys, &String.contains?(&1, "first_function/0")),
         "CollisionModuleB missing first_function/0"
     end
+
+    test "extracts local calls from a single file" do
+      # This test verifies the fix for the bug where call extraction
+      # from individual files was broken due to empty known_modules set.
+      # See: https://github.com/your-repo/issues/XXX
+      beam_file = find_beam_file("CallExtractionFixture")
+
+      assert {:ok, %Extractor{} = result} = Extractor.run(%{files: [beam_file]})
+
+      # Should have extracted calls from the fixture module
+      assert result.stats.modules_processed == 1
+      assert result.stats.modules_with_debug_info == 1
+
+      # Filter calls to only local calls within CallExtractionFixture
+      local_calls = Enum.filter(result.calls, fn call ->
+        call.type == :local &&
+        call.caller.module == "CallExtractionFixture" &&
+        call.callee.module == "CallExtractionFixture"
+      end)
+
+      # Expected local calls:
+      # 1. greet/1 -> format_greeting/1
+      # 2. process_list/1 -> sum_helper/1
+      # 3. factorial/1 -> factorial/1 (recursive)
+      assert length(local_calls) == 3, "Expected 3 local calls, got #{length(local_calls)}"
+
+      # Verify specific calls
+      call_signatures = Enum.map(local_calls, fn call ->
+        "#{call.caller.function} -> #{call.callee.function}/#{call.callee.arity}"
+      end)
+
+      assert "greet/1 -> format_greeting/1" in call_signatures
+      assert "process_list/1 -> sum_helper/1" in call_signatures
+      assert "factorial/1 -> factorial/1" in call_signatures
+    end
   end
 
   # Find a BEAM file from this project to use in tests

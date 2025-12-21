@@ -86,7 +86,9 @@ defmodule ExAst.Extractor do
         build_dir: build_dir,
         environment: nil,
         apps: [],
-        known_modules: MapSet.new()
+        # Use nil for file mode to avoid strict filtering - we want all calls
+        # except stdlib/Erlang, not just calls within the processed modules
+        known_modules: nil
       }
 
       run_extraction(absolute_paths, context)
