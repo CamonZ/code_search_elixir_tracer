@@ -47,6 +47,7 @@ ex_ast [OPTIONS] [PATH]
 | `--output FILE` | `-o` | Output file path (default: `extracted_trace.<format>`) |
 | `--format FORMAT` | `-F` | Output format: `json` or `toon` (default: `json`) |
 | `--file BEAM_FILE` | `-f` | Process specific BEAM file(s) instead of a project (repeatable) |
+| `--git-diff REF` | `-g` | Process only files changed in git diff (commit hash, branch, `HEAD~1`, `--staged`, etc.) |
 | `--include-deps` | `-d` | Include all dependencies in analysis |
 | `--deps DEP1,DEP2` | | Include specific dependencies (comma-separated) |
 | `--env ENV` | `-e` | Mix environment to use (default: `dev`) |
@@ -78,6 +79,15 @@ ex_ast -f path/to/Module.beam
 
 # Analyze multiple BEAM files
 ex_ast -f A.beam -f B.beam
+
+# Analyze only files changed in last commit
+ex_ast --git-diff HEAD~1
+
+# Analyze files changed between branches
+ex_ast --git-diff main..feature
+
+# Analyze staged changes
+ex_ast --git-diff --staged
 ```
 
 ## Output Format
@@ -125,6 +135,13 @@ See [docs/OUTPUT_FORMAT.md](docs/OUTPUT_FORMAT.md) for the complete output schem
 1. Processes specified BEAM file(s) directly
 2. No project context required - useful for analyzing individual modules
 3. Extracts all available information without filtering
+
+### Git Diff Mode (`--git-diff`)
+1. Runs `git diff` to identify changed source files
+2. Maps changed `.ex` files to their corresponding BEAM files in `_build/<env>/lib/`
+3. Processes only the BEAM files for changed modules
+4. Requires BEAM files to already exist (run `mix compile` first if needed)
+5. Useful for incremental analysis of changes
 
 ## Documentation
 
