@@ -205,7 +205,10 @@ defmodule ExAst.Extractor.CallExtractorTest do
 
       # Should not include % operator as a function call
       function_names = Enum.map(calls, & &1.callee.function)
-      refute "%" in function_names, "Struct creation (% operator) should not be extracted as a function call"
+
+      refute "%" in function_names,
+             "Struct creation (% operator) should not be extracted as a function call"
+
       assert length(calls) == 0, "Expected no calls but got: #{inspect(calls)}"
     end
 

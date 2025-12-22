@@ -6,6 +6,11 @@ defmodule ExAst.CLI do
   alias ExAst.Extractor
   alias ExAst.Output
 
+  # Exit codes
+  @exit_success 0
+  @exit_error 1
+  @exit_compilation_required 2
+
   @switches [
     output: :string,
     format: :string,
@@ -13,6 +18,7 @@ defmodule ExAst.CLI do
     deps: :string,
     env: :string,
     file: [:string, :keep],
+    git_diff: :string,
     help: :boolean
   ]
 
@@ -22,6 +28,7 @@ defmodule ExAst.CLI do
     d: :include_deps,
     e: :env,
     f: :file,
+    g: :git_diff,
     h: :help
   ]
 
@@ -32,7 +39,8 @@ defmodule ExAst.CLI do
     deps: [],
     env: "dev",
     path: ".",
-    files: []
+    files: [],
+    git_diff: nil
   }
 
   @valid_formats ~w(toon json)
@@ -49,9 +57,13 @@ defmodule ExAst.CLI do
       :help ->
         print_help()
 
+      {:error, {:compilation_required, message}} ->
+        IO.puts(:stderr, "Error: #{message}")
+        System.halt(@exit_compilation_required)
+
       {:error, reason} ->
         IO.puts(:stderr, "Error: #{reason}")
-        System.halt(1)
+        System.halt(@exit_error)
     end
   end
 
@@ -123,7 +135,8 @@ defmodule ExAst.CLI do
 
   defp validate_options(options) do
     with :ok <- validate_format(options),
-         :ok <- validate_deps_exclusivity(options) do
+         :ok <- validate_deps_exclusivity(options),
+         :ok <- validate_git_diff_exclusivity(options) do
       {:ok, options}
     end
   end
@@ -139,6 +152,23 @@ defmodule ExAst.CLI do
   end
 
   defp validate_deps_exclusivity(_options), do: :ok
+
+  defp validate_git_diff_exclusivity(%{git_diff: git_diff, files: files})
+       when not is_nil(git_diff) and files != [] do
+    {:error, "--git-diff and --file are mutually exclusive"}
+  end
+
+  defp validate_git_diff_exclusivity(%{git_diff: git_diff, include_deps: true})
+       when not is_nil(git_diff) do
+    {:error, "--git-diff and --include-deps are mutually exclusive"}
+  end
+
+  defp validate_git_diff_exclusivity(%{git_diff: git_diff, deps: deps})
+       when not is_nil(git_diff) and deps != [] do
+    {:error, "--git-diff and --deps are mutually exclusive"}
+  end
+
+  defp validate_git_diff_exclusivity(_options), do: :ok
 
   defp format_invalid_options(invalid) do
     invalid
@@ -161,10 +191,18 @@ defmodule ExAst.CLI do
       -F, --format FORMAT     Output format: "json" or "toon" (default: "json")
       -f, --file BEAM_FILE    Process specific BEAM file(s) instead of a project
                               (can be specified multiple times)
+      -g, --git-diff REF      Process only files changed in git diff
+                              REF can be: commit hash, branch name, "HEAD~1", "--staged", etc.
+                              Requires corresponding BEAM files to already exist
       -d, --include-deps      Include all dependencies in analysis
           --deps DEPS         Include specific dependencies (comma-separated)
       -e, --env ENV           Mix environment to use (default: "dev")
       -h, --help              Show this help message
+
+    Exit Codes:
+      0                       Success
+      1                       General error (invalid options, file not found, etc.)
+      2                       Compilation required (BEAM files missing or outdated)
 
     Examples:
       ex_ast                          Analyze current directory
@@ -174,6 +212,9 @@ defmodule ExAst.CLI do
       ex_ast --deps phoenix,ecto      Include specific dependencies
       ex_ast -f path/to/Module.beam   Analyze a single BEAM file
       ex_ast -f A.beam -f B.beam      Analyze multiple BEAM files
+      ex_ast --git-diff HEAD~1        Analyze files changed in last commit
+      ex_ast --git-diff main..feature Analyze files changed between branches
+      ex_ast --git-diff --staged      Analyze staged changes
     """)
   end
 

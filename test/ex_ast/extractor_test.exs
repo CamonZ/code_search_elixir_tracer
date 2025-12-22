@@ -148,8 +148,9 @@ defmodule ExAst.ExtractorTest do
 
       # Verify no spec has name "__info__"
       refute Enum.any?(module_specs, fn spec ->
-        spec[:name] == "__info__" || spec[:name] == :__info__
-      end), "Expected __info__ spec to be excluded from exported specs"
+               spec[:name] == "__info__" || spec[:name] == :__info__
+             end),
+             "Expected __info__ spec to be excluded from exported specs"
     end
 
     test "returns error for missing file" do
@@ -173,20 +174,22 @@ defmodule ExAst.ExtractorTest do
       ]
 
       # Run extraction multiple times to catch race conditions
-      results = for _ <- 1..5 do
-        {:ok, result} = Extractor.run(%{files: beam_files})
-        result
-      end
+      results =
+        for _ <- 1..5 do
+          {:ok, result} = Extractor.run(%{files: beam_files})
+          result
+        end
 
       # All runs should extract the same number of functions
       # function_locations is a flat map with keys prefixed by module name
-      function_counts = Enum.map(results, fn r ->
-        map_size(r.function_locations)
-      end)
+      function_counts =
+        Enum.map(results, fn r ->
+          map_size(r.function_locations)
+        end)
 
       # Should have 4 functions total (2 per module)
       assert Enum.all?(function_counts, &(&1 == 4)),
-        "Expected 4 functions in all runs, got: #{inspect(function_counts)}"
+             "Expected 4 functions in all runs, got: #{inspect(function_counts)}"
 
       # Verify both modules have their functions
       result = hd(results)
@@ -206,9 +209,10 @@ defmodule ExAst.ExtractorTest do
       module_b_keys = Enum.map(by_module["CollisionModuleB"], fn {key, _} -> key end)
 
       assert Enum.any?(module_a_keys, &String.contains?(&1, "first_function/0")),
-        "CollisionModuleA missing first_function/0"
+             "CollisionModuleA missing first_function/0"
+
       assert Enum.any?(module_b_keys, &String.contains?(&1, "first_function/0")),
-        "CollisionModuleB missing first_function/0"
+             "CollisionModuleB missing first_function/0"
     end
 
     test "extracts local calls from a single file" do
@@ -224,11 +228,12 @@ defmodule ExAst.ExtractorTest do
       assert result.stats.modules_with_debug_info == 1
 
       # Filter calls to only local calls within CallExtractionFixture
-      local_calls = Enum.filter(result.calls, fn call ->
-        call.type == :local &&
-        call.caller.module == "CallExtractionFixture" &&
-        call.callee.module == "CallExtractionFixture"
-      end)
+      local_calls =
+        Enum.filter(result.calls, fn call ->
+          call.type == :local &&
+            call.caller.module == "CallExtractionFixture" &&
+            call.callee.module == "CallExtractionFixture"
+        end)
 
       # Expected local calls:
       # 1. greet/1 -> format_greeting/1
@@ -237,9 +242,10 @@ defmodule ExAst.ExtractorTest do
       assert length(local_calls) == 3, "Expected 3 local calls, got #{length(local_calls)}"
 
       # Verify specific calls
-      call_signatures = Enum.map(local_calls, fn call ->
-        "#{call.caller.function} -> #{call.callee.function}/#{call.callee.arity}"
-      end)
+      call_signatures =
+        Enum.map(local_calls, fn call ->
+          "#{call.caller.function} -> #{call.callee.function}/#{call.callee.arity}"
+        end)
 
       assert "greet/1 -> format_greeting/1" in call_signatures
       assert "process_list/1 -> sum_helper/1" in call_signatures

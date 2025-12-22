@@ -17,6 +17,7 @@ defmodule ExAst.Extractor do
   alias ExAst.Extractor.FunctionExtractor
   alias ExAst.Extractor.SpecExtractor
   alias ExAst.Extractor.StructExtractor
+  alias ExAst.GitDiff
   alias ExAst.Utils
 
   defstruct [
@@ -54,12 +55,18 @@ defmodule ExAst.Extractor do
 
   ## Options
 
+  When `git_diff` is provided:
+  - Gets changed .ex files from git diff
+  - Maps to corresponding BEAM files
+  - Validates BEAM files exist and are current
+  - Processes only the changed BEAM files
+
   When `files` is provided (non-empty list):
   - Validates all files exist and have `.beam` extension
   - Processes only the specified BEAM files
   - Bypasses project discovery
 
-  When `files` is empty or not provided:
+  When neither `git_diff` nor `files` is provided:
   - `path` - Path to the project (required)
   - `env` - Mix environment (e.g., "dev")
   - `include_deps` - Whether to include all dependencies
@@ -68,6 +75,31 @@ defmodule ExAst.Extractor do
   Returns `{:ok, %Extractor{}}` on success or `{:error, reason}` on failure.
   """
   @spec run(options :: map()) :: {:ok, t()} | {:error, String.t()}
+  def run(%{git_diff: git_ref} = options) when not is_nil(git_ref) do
+    project_path = Path.expand(options.path)
+
+    with {:ok, build_lib_path} <- BuildDiscovery.find_build_dir(project_path, options.env),
+         {:ok, beam_files} <-
+           GitDiff.get_beam_files_for_diff(git_ref, build_lib_path, project_path),
+         {:ok, project_apps} <- BuildDiscovery.find_project_apps(project_path) do
+      project_type = BuildDiscovery.detect_project_type(project_path)
+      apps = BuildDiscovery.list_app_directories(build_lib_path)
+      known_modules = BeamReader.collect_modules_from_apps(apps)
+
+      context = %{
+        project_type: project_type,
+        project_apps: project_apps,
+        project_path: project_path,
+        build_dir: build_lib_path,
+        environment: options.env,
+        apps: apps,
+        known_modules: known_modules
+      }
+
+      run_extraction(beam_files, context)
+    end
+  end
+
   def run(%{files: files}) when is_list(files) and files != [] do
     with :ok <- validate_beam_files(files) do
       absolute_paths = Enum.map(files, &Path.expand/1)
