@@ -28,6 +28,7 @@ defmodule CallExtractionFixture do
   Public function with a local recursive call.
   """
   def factorial(0), do: 1
+
   def factorial(n) when n > 0 do
     n * factorial(n - 1)
   end
