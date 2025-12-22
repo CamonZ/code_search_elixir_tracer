@@ -26,10 +26,10 @@ defmodule ExAst.GitDiff do
       {:ok, ["_build/dev/lib/myapp/ebin/Elixir.Foo.beam"]}
 
       iex> get_beam_files_for_diff("--staged", "_build/dev", ".")
-      {:error, "Compilation required..."}
+      {:error, {:compilation_required, "Compilation required..."}}
   """
   @spec get_beam_files_for_diff(String.t(), String.t(), String.t()) ::
-          {:ok, [String.t()]} | {:error, String.t()}
+          {:ok, [String.t()]} | {:error, String.t() | {:compilation_required, String.t()}}
   def get_beam_files_for_diff(git_ref, build_dir, project_path) do
     with {:ok, ex_files} <- get_changed_ex_files(git_ref, project_path),
          {:ok, mappings} <- map_ex_files_to_beams(ex_files, build_dir, project_path) do
@@ -93,6 +93,7 @@ defmodule ExAst.GitDiff do
 
   # Private functions
 
+  @spec build_git_diff_args(String.t()) :: [String.t()]
   defp build_git_diff_args(git_ref) do
     base_args = ["diff", "--name-only"]
 
@@ -103,6 +104,7 @@ defmodule ExAst.GitDiff do
     end
   end
 
+  @spec extract_modules_from_content(String.t()) :: [atom()]
   defp extract_modules_from_content(content) do
     case Code.string_to_quoted(content) do
       {:ok, ast} ->
@@ -114,6 +116,7 @@ defmodule ExAst.GitDiff do
     end
   end
 
+  @spec extract_modules_from_ast(Macro.t()) :: [atom()]
   defp extract_modules_from_ast(ast) do
     {_ast, modules} =
       Macro.prewalk(ast, [], fn
@@ -128,6 +131,7 @@ defmodule ExAst.GitDiff do
     Enum.reverse(modules)
   end
 
+  @spec extract_modules_with_regex(String.t()) :: [atom()]
   defp extract_modules_with_regex(content) do
     regex = ~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/m
 
@@ -137,6 +141,8 @@ defmodule ExAst.GitDiff do
     end)
   end
 
+  @spec map_ex_files_to_beams([String.t()], String.t(), String.t()) ::
+          {:ok, [{String.t(), atom(), String.t()}]}
   defp map_ex_files_to_beams(ex_files, build_dir, project_path) do
     mappings =
       ex_files
@@ -155,6 +161,7 @@ defmodule ExAst.GitDiff do
     {:ok, mappings}
   end
 
+  @spec find_beam_in_build_dir(String.t(), String.t()) :: String.t()
   defp find_beam_in_build_dir(beam_filename, build_dir) do
     # Search for BEAM file in all ebin directories under build_dir
     # Handles both regular and umbrella projects
@@ -166,6 +173,8 @@ defmodule ExAst.GitDiff do
     end
   end
 
+  @spec validate_beams_exist_and_current([{String.t(), atom(), String.t()}]) ::
+          {:ok, [String.t()]} | {:error, {:compilation_required, String.t()}}
   defp validate_beams_exist_and_current(mappings) do
     issues =
       mappings
@@ -187,10 +196,11 @@ defmodule ExAst.GitDiff do
       beam_files = Enum.map(mappings, fn {_, _, beam_path} -> beam_path end)
       {:ok, beam_files}
     else
-      {:error, format_compilation_error(issues)}
+      {:error, {:compilation_required, format_compilation_error(issues)}}
     end
   end
 
+  @spec source_newer_than_beam?(String.t(), String.t()) :: boolean()
   defp source_newer_than_beam?(ex_file, beam_path) do
     with {:ok, ex_stat} <- File.stat(ex_file),
          {:ok, beam_stat} <- File.stat(beam_path) do
@@ -203,6 +213,7 @@ defmodule ExAst.GitDiff do
     end
   end
 
+  @spec format_compilation_error([{:missing | :outdated, String.t(), String.t()}]) :: String.t()
   defp format_compilation_error(issues) do
     grouped = Enum.group_by(issues, fn {type, _, _} -> type end)
 

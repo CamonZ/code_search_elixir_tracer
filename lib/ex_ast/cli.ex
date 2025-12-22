@@ -6,6 +6,11 @@ defmodule ExAst.CLI do
   alias ExAst.Extractor
   alias ExAst.Output
 
+  # Exit codes
+  @exit_success 0
+  @exit_error 1
+  @exit_compilation_required 2
+
   @switches [
     output: :string,
     format: :string,
@@ -52,9 +57,13 @@ defmodule ExAst.CLI do
       :help ->
         print_help()
 
+      {:error, {:compilation_required, message}} ->
+        IO.puts(:stderr, "Error: #{message}")
+        System.halt(@exit_compilation_required)
+
       {:error, reason} ->
         IO.puts(:stderr, "Error: #{reason}")
-        System.halt(1)
+        System.halt(@exit_error)
     end
   end
 
@@ -189,6 +198,11 @@ defmodule ExAst.CLI do
           --deps DEPS         Include specific dependencies (comma-separated)
       -e, --env ENV           Mix environment to use (default: "dev")
       -h, --help              Show this help message
+
+    Exit Codes:
+      0                       Success
+      1                       General error (invalid options, file not found, etc.)
+      2                       Compilation required (BEAM files missing or outdated)
 
     Examples:
       ex_ast                          Analyze current directory

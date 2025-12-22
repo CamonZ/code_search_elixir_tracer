@@ -3,23 +3,24 @@ defmodule ExAst.GitDiffTest do
 
   alias ExAst.GitDiff
 
-  @test_dir "/private/tmp/test_incremental/ex_ast_git_diff_test"
-
   setup do
+    # Create unique test directory in system temp
+    test_dir = Path.join(System.tmp_dir!(), "ex_ast_git_diff_test_#{:rand.uniform(100000)}")
+
     # Clean up any existing test directory
-    File.rm_rf!(@test_dir)
-    File.mkdir_p!(@test_dir)
+    File.rm_rf!(test_dir)
+    File.mkdir_p!(test_dir)
 
     # Initialize git repo
-    System.cmd("git", ["init"], cd: @test_dir)
-    System.cmd("git", ["config", "user.email", "test@example.com"], cd: @test_dir)
-    System.cmd("git", ["config", "user.name", "Test User"], cd: @test_dir)
+    System.cmd("git", ["init"], cd: test_dir)
+    System.cmd("git", ["config", "user.email", "test@example.com"], cd: test_dir)
+    System.cmd("git", ["config", "user.name", "Test User"], cd: test_dir)
 
     on_exit(fn ->
-      File.rm_rf!(@test_dir)
+      File.rm_rf!(test_dir)
     end)
 
-    {:ok, test_dir: @test_dir}
+    {:ok, test_dir: test_dir}
   end
 
   describe "extract_modules_from_file/1" do
@@ -189,10 +190,13 @@ defmodule ExAst.GitDiffTest do
       System.cmd("git", ["add", "."], cd: test_dir)
       System.cmd("git", ["commit", "-m", "Add foo"], cd: test_dir)
 
-      # Create BEAM file with newer timestamp
-      :timer.sleep(1000)
+      # Create BEAM file with future timestamp (2 seconds ahead)
       beam_file = Path.join(build_dir, "Elixir.Foo.beam")
       File.write!(beam_file, "fake beam content")
+
+      future_time = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) + 2
+      future_datetime = :calendar.gregorian_seconds_to_datetime(future_time)
+      File.touch!(beam_file, future_datetime)
 
       # Change the file
       File.write!(ex_file, """
@@ -238,7 +242,7 @@ defmodule ExAst.GitDiffTest do
       System.cmd("git", ["commit", "-m", "Change missing"], cd: test_dir)
 
       # No BEAM file exists
-      assert {:error, error_msg} =
+      assert {:error, {:compilation_required, error_msg}} =
                GitDiff.get_beam_files_for_diff(
                  "HEAD~1",
                  Path.join(test_dir, "_build/dev"),
@@ -289,7 +293,7 @@ defmodule ExAst.GitDiffTest do
       System.cmd("git", ["add", "."], cd: test_dir)
       System.cmd("git", ["commit", "-m", "Change outdated"], cd: test_dir)
 
-      assert {:error, error_msg} =
+      assert {:error, {:compilation_required, error_msg}} =
                GitDiff.get_beam_files_for_diff(
                  "HEAD~1",
                  Path.join(test_dir, "_build/dev"),
@@ -322,12 +326,16 @@ defmodule ExAst.GitDiffTest do
       System.cmd("git", ["add", "."], cd: test_dir)
       System.cmd("git", ["commit", "-m", "Add multi"], cd: test_dir)
 
-      # Create both BEAM files
-      :timer.sleep(1000)
+      # Create both BEAM files with future timestamp
       beam_one = Path.join(build_dir, "Elixir.Multi.One.beam")
       beam_two = Path.join(build_dir, "Elixir.Multi.Two.beam")
       File.write!(beam_one, "fake beam one")
       File.write!(beam_two, "fake beam two")
+
+      future_time = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) + 2
+      future_datetime = :calendar.gregorian_seconds_to_datetime(future_time)
+      File.touch!(beam_one, future_datetime)
+      File.touch!(beam_two, future_datetime)
 
       File.write!(ex_file, """
       defmodule Multi.One do
@@ -371,9 +379,13 @@ defmodule ExAst.GitDiffTest do
       System.cmd("git", ["add", "."], cd: test_dir)
       System.cmd("git", ["commit", "-m", "Add nested"], cd: test_dir)
 
-      :timer.sleep(1000)
+      # Create BEAM file with future timestamp
       beam_file = Path.join(build_dir, "Elixir.Nested.beam")
       File.write!(beam_file, "fake beam nested")
+
+      future_time = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) + 2
+      future_datetime = :calendar.gregorian_seconds_to_datetime(future_time)
+      File.touch!(beam_file, future_datetime)
 
       File.write!(ex_file, """
       defmodule Nested do
